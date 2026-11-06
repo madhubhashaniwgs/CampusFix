@@ -78,6 +78,44 @@ class IssueController {
       next(error);
     }
   };
+
+    getStaffMembers = async (req, res, next) => {
+    try {
+        const staff = await issueService.getStaffMembers();
+
+        res.status(200).json(
+        new ApiResponse(
+            200,
+            'Staff members retrieved successfully',
+            staff
+        )
+        );
+    } catch (error) {
+        next(error);
+    }
+    };
+
+    assignIssue = async (req, res, next) => {
+    try {
+        const { staffId } = req.body;
+
+        const issue = await issueService.assignIssue(
+        req.params.id,
+        staffId,
+        req.user.id
+        );
+
+        res.status(200).json(
+        new ApiResponse(
+            200,
+            'Issue assigned successfully',
+            issue
+        )
+        );
+    } catch (error) {
+        next(error);
+    }
+    };
 }
 
 export default new IssueController();

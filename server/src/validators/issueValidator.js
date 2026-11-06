@@ -80,3 +80,22 @@ export const validateUpdateStatus = (req, res, next) => {
 
   next();
 };
+
+
+export const validateAssignIssue = (req, res, next) => {
+  const { staffId } = req.body;
+
+  if (!staffId) {
+    return next(
+      new ApiError(400, 'Staff ID is required')
+    );
+  }
+
+  if (!/^[0-9a-fA-F]{24}$/.test(staffId)) {
+    return next(
+      new ApiError(400, 'Invalid staff ID')
+    );
+  }
+
+  next();
+};

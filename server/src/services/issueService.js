@@ -119,6 +119,48 @@ class IssueService {
 
     return issueRepository.findById(updatedIssue._id);
   }
+
+    async getStaffMembers() {
+    return issueRepository.findStaffMembers();
+    }
+
+    async assignIssue(issueId, staffId, adminId) {
+    if (
+        !mongoose.isValidObjectId(issueId) ||
+        !mongoose.isValidObjectId(staffId)
+    ) {
+        throw new ApiError(400, 'Invalid issue ID or staff ID');
+    }
+
+    const issue = await issueRepository.findById(issueId);
+
+    if (!issue) {
+        throw new ApiError(404, 'Issue not found');
+    }
+
+    const staff = await issueRepository.findStaffMembers();
+
+    const selectedStaff = staff.find(
+        (member) => member._id.toString() === staffId
+    );
+
+    if (!selectedStaff) {
+        throw new ApiError(404, 'Active staff member not found');
+    }
+
+    if (['resolved', 'rejected'].includes(issue.status)) {
+        throw new ApiError(
+        400,
+        'Cannot assign a resolved or rejected issue'
+        );
+    }
+
+    return issueRepository.assignStaff(
+        issueId,
+        staffId,
+        adminId
+    );
+    }
 }
 
 export default new IssueService();

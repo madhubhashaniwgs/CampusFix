@@ -1,4 +1,5 @@
 import Issue from '../models/Issue.js';
+import User from '../models/User.js';
 
 class IssueRepository {
   async create(issueData) {
@@ -39,6 +40,40 @@ class IssueRepository {
       { new: true, runValidators: true }
     );
   }
+
+  async findStaffMembers() {
+    return User.find({
+        role: 'staff',
+        isActive: true,
+    }).select('fullName email');
+ }
+
+    async assignStaff(issueId, staffId, adminId) {
+    return Issue.findByIdAndUpdate(
+        issueId,
+        {
+        $set: {
+            assignedTo: staffId,
+            status: 'assigned',
+        },
+        $push: {
+            statusHistory: {
+            status: 'assigned',
+            updatedBy: adminId,
+            note: 'Issue assigned to staff member',
+            updatedAt: new Date(),
+            },
+        },
+        },
+        {
+        new: true,
+        runValidators: true,
+        }
+    )
+        .populate('reportedBy', 'fullName email')
+        .populate('assignedTo', 'fullName email')
+        .populate('statusHistory.updatedBy', 'fullName');
+    }
 }
 
 export default new IssueRepository();
