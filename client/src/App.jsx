@@ -15,6 +15,7 @@ import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffIssuesPage from './pages/staff/StaffIssuesPage';
+import StaffIssueDetailsPage from './pages/staff/StaffIssueDetailsPage';
 
 import './App.css';
 
@@ -90,6 +91,11 @@ function App() {
         <Route
           path="/staff/issues"
           element={<StaffIssuesPage />}
+        />
+
+        <Route
+          path="/staff/issues/:id"
+          element={<StaffIssueDetailsPage />}
         />
       </Route>
 
