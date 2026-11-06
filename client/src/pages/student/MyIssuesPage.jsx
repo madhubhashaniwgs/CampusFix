@@ -205,7 +205,18 @@ function MyIssuesPage() {
           ) : (
             <div className="issues-grid">
               {filteredIssues.map((issue) => (
-                <article className="issue-card" key={issue._id}>
+                <article
+                    className="issue-card"
+                    key={issue._id}
+                    onClick={() => navigate(`/student/issues/${issue._id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                        navigate(`/student/issues/${issue._id}`);
+                        }
+                    }}
+                >
                   <div className="issue-card-top">
                     <span className="ticket-id">{issue.ticketId}</span>
 
@@ -241,6 +252,14 @@ function MyIssuesPage() {
                       {priorityLabels[issue.priority] || issue.priority} Priority
                     </span>
                   </div>
+
+                  <button
+                    className="view-details-button"
+                    onClick={() => navigate(`/student/issues/${issue._id}`)}
+                    >
+                    View Details →
+                  </button>
+
                 </article>
               ))}
             </div>

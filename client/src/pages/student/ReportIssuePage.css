@@ -187,3 +187,21 @@
     width: 100%;
   }
 }
+
+.view-details-button {
+  width: 100%;
+  margin-top: 17px;
+  padding: 10px;
+  color: #6d28d9;
+  background: #f5f0ff;
+  border: 1px solid #e5d8ff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.view-details-button:hover {
+  background: #ede5ff;
+}

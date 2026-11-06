@@ -8,6 +8,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ReportIssuePage from './pages/student/ReportIssuePage';
 import MyIssuesPage from './pages/student/MyIssuesPage';
+import IssueDetailsPage from './pages/student/IssueDetailsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 import './App.css';
@@ -65,6 +66,11 @@ function App() {
         path="/student/my-issues"
         element={<MyIssuesPage />}
       />
+
+        <Route
+          path="/student/issues/:id"
+          element={<IssueDetailsPage />}
+        />
       </Route>
 
       
