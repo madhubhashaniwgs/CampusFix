@@ -13,6 +13,8 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
+import StaffDashboardPage from './pages/staff/StaffDashboardPage';
+import StaffIssuesPage from './pages/staff/StaffIssuesPage';
 
 import './App.css';
 
@@ -82,7 +84,12 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
         <Route
           path="/staff/dashboard"
-          element={<DashboardPage />}
+          element={<StaffDashboardPage />}
+        />
+
+        <Route
+          path="/staff/issues"
+          element={<StaffIssuesPage />}
         />
       </Route>
 
@@ -97,7 +104,7 @@ function App() {
           path="/admin/issues"
           element={<AdminIssuesPage />}
         />
-        
+
         <Route
           path="/admin/issues/:id"
           element={<AdminIssueDetailsPage />}
