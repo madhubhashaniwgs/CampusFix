@@ -356,3 +356,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-manage-issues-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 9px;
+  background: #7c3aed;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-manage-issues-button:hover {
+  background: #6d28d9;
+}

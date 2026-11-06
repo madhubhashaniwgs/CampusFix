@@ -11,6 +11,8 @@ import MyIssuesPage from './pages/student/MyIssuesPage';
 import IssueDetailsPage from './pages/student/IssueDetailsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminIssuesPage from './pages/admin/AdminIssuesPage';
+import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
 
 import './App.css';
 
@@ -90,6 +92,17 @@ function App() {
           path="/admin/dashboard"
           element={<AdminDashboardPage />}
         />
+
+        <Route
+          path="/admin/issues"
+          element={<AdminIssuesPage />}
+        />
+        
+        <Route
+          path="/admin/issues/:id"
+          element={<AdminIssueDetailsPage />}
+        />
+
       </Route>
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />

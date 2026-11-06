@@ -1,0 +1,754 @@
+
+/* =========================================
+   CAMPUSFIX - ADMIN ISSUE DETAILS PAGE
+========================================= */
+
+.admin-issue-details-page {
+  min-height: 100vh;
+  background: #f5f3ff;
+  color: #2e1065;
+  padding-bottom: 40px;
+}
+
+/* =========================================
+   TOP BAR
+========================================= */
+
+.admin-detail-topbar {
+  width: 100%;
+  min-height: 76px;
+  padding: 0 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #ede9fe;
+  box-shadow: 0 2px 10px rgba(76, 29, 149, 0.04);
+}
+
+.admin-detail-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  border: 1px solid #ddd6fe;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #6d28d9;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-detail-back-button:hover {
+  background: #f5f3ff;
+  border-color: #a78bfa;
+  transform: translateX(-2px);
+}
+
+.admin-detail-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #5b21b6;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.admin-detail-brand svg {
+  color: #7c3aed;
+}
+
+.admin-detail-brand span {
+  margin-left: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+/* =========================================
+   MAIN CONTAINER
+========================================= */
+
+.admin-detail-container {
+  width: min(1100px, 90%);
+  margin: 0 auto;
+}
+
+/* =========================================
+   PAGE HEADING
+========================================= */
+
+.admin-detail-heading {
+  padding: 38px 0 25px;
+}
+
+.admin-detail-heading > span {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #8b5cf6;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.admin-detail-heading h1 {
+  margin: 0;
+  color: #2e1065;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+}
+
+.admin-detail-heading p {
+  margin: 9px 0 0;
+  color: #81758f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* =========================================
+   MAIN ISSUE CARD
+========================================= */
+
+.admin-detail-main-card {
+  padding: 28px;
+  margin-bottom: 22px;
+  background: #ffffff;
+  border: 1px solid #e9e3ff;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(76, 29, 149, 0.05);
+}
+
+.admin-detail-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0ebfa;
+}
+
+.admin-detail-ticket {
+  display: inline-block;
+  margin-bottom: 9px;
+  color: #8b5cf6;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.admin-detail-card-header h2 {
+  margin: 0;
+  color: #2e1065;
+  font-size: 23px;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   ISSUE STATUS BADGES
+========================================= */
+
+.admin-detail-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 13px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.admin-detail-status.reported {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-detail-status.assigned {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-detail-status.in_progress {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.admin-detail-status.resolved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-detail-status.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* =========================================
+   DESCRIPTION
+========================================= */
+
+.admin-detail-description {
+  margin: 22px 0;
+  color: #5b506d;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   ISSUE INFORMATION GRID
+========================================= */
+
+.admin-detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 30px;
+  padding-top: 22px;
+  border-top: 1px solid #f0ebfa;
+}
+
+.admin-detail-info-grid > div,
+.admin-detail-person-info > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-detail-info-grid > div > span,
+.admin-detail-person-info > div > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #958aa6;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-detail-info-grid > div > span svg {
+  color: #8b5cf6;
+}
+
+.admin-detail-info-grid > div > strong,
+.admin-detail-person-info > div > strong {
+  color: #35244f;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   PRIORITY BADGES
+========================================= */
+
+.admin-detail-priority {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 12px !important;
+}
+
+.admin-detail-priority.low {
+  background: #dcfce7;
+  color: #15803d !important;
+}
+
+.admin-detail-priority.medium {
+  background: #fef3c7;
+  color: #92400e !important;
+}
+
+.admin-detail-priority.high {
+  background: #ffedd5;
+  color: #c2410c !important;
+}
+
+.admin-detail-priority.urgent {
+  background: #fee2e2;
+  color: #b91c1c !important;
+}
+
+/* =========================================
+   SECTION CARDS
+========================================= */
+
+.admin-detail-section-card {
+  padding: 26px 28px;
+  margin-bottom: 22px;
+  background: #ffffff;
+  border: 1px solid #e9e3ff;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(76, 29, 149, 0.04);
+}
+
+/* =========================================
+   SECTION HEADINGS
+========================================= */
+
+.admin-detail-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 24px;
+}
+
+.admin-detail-section-heading > svg {
+  flex-shrink: 0;
+  padding: 9px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.admin-detail-section-heading h2 {
+  margin: 0;
+  color: #3b0764;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.admin-detail-section-heading p {
+  margin: 5px 0 0;
+  color: #958aa6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* =========================================
+   REPORTED BY - STUDENT INFORMATION
+========================================= */
+
+.admin-detail-person-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 19px;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  background: #faf9ff;
+}
+
+/* =========================================
+   ISSUE PROGRESS
+========================================= */
+
+.admin-detail-progress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 0 5px;
+}
+
+.admin-detail-progress-step {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  text-align: center;
+}
+
+.admin-detail-progress-step::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 17px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  background: #e9e3ff;
+}
+
+.admin-detail-progress-step:first-child::before {
+  display: none;
+}
+
+.admin-detail-progress-step.completed::before {
+  background: #8b5cf6;
+}
+
+.admin-detail-progress-step > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #ddd6fe;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.admin-detail-progress-step.completed > div {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 3px 9px rgba(124, 58, 237, 0.2);
+}
+
+.admin-detail-progress-step > span {
+  color: #958aa6;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-detail-progress-step.completed > span {
+  color: #6d28d9;
+  font-weight: 750;
+}
+
+/* =========================================
+   REJECTED MESSAGE
+========================================= */
+
+.admin-detail-rejected {
+  padding: 15px 18px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+/* =========================================
+   STATUS HISTORY
+========================================= */
+
+.admin-detail-history {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 5px;
+}
+
+.admin-detail-history-item {
+  position: relative;
+  display: flex;
+  gap: 17px;
+  padding-bottom: 25px;
+}
+
+.admin-detail-history-item:last-child {
+  padding-bottom: 0;
+}
+
+.admin-detail-history-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 6px;
+  width: 2px;
+  height: calc(100% - 17px);
+  background: #ddd6fe;
+}
+
+.admin-detail-history-dot {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border: 3px solid #c4b5fd;
+  border-radius: 50%;
+  background: #7c3aed;
+}
+
+.admin-detail-history-item > div:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-detail-history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.admin-detail-history-title strong {
+  color: #4c1d95;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.admin-detail-history-title span {
+  color: #a398b3;
+  font-size: 11px;
+}
+
+.admin-detail-history-item p {
+  margin: 8px 0;
+  color: #6b607d;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.admin-detail-history-user {
+  display: inline-block;
+  color: #8b5cf6;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* =========================================
+   FOOTER BUTTON
+========================================= */
+
+.admin-detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 5px;
+}
+
+.admin-detail-footer button,
+.admin-detail-state button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 19px;
+  border: none;
+  border-radius: 9px;
+  background: #6d28d9;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-detail-footer button:hover,
+.admin-detail-state button:hover {
+  background: #5b21b6;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(109, 40, 217, 0.2);
+}
+
+/* =========================================
+   LOADING & ERROR STATES
+========================================= */
+
+.admin-detail-state {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  padding: 25px;
+  background: #f5f3ff;
+  text-align: center;
+}
+
+.admin-detail-state h2 {
+  margin: 0;
+  color: #3b0764;
+  font-size: 22px;
+}
+
+.admin-detail-state p {
+  margin: 0 0 8px;
+  color: #81758f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-detail-spinner {
+  color: #7c3aed;
+  animation: admin-detail-spin 1s linear infinite;
+}
+
+@keyframes admin-detail-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   RESPONSIVE DESIGN - TABLET
+========================================= */
+
+@media (max-width: 768px) {
+  .admin-detail-topbar {
+    padding: 0 4%;
+  }
+
+  .admin-detail-container {
+    width: 92%;
+  }
+
+  .admin-detail-heading {
+    padding-top: 30px;
+  }
+
+  .admin-detail-main-card,
+  .admin-detail-section-card {
+    padding: 22px;
+  }
+
+  .admin-detail-card-header h2 {
+    font-size: 20px;
+  }
+
+  .admin-detail-progress-step > span {
+    font-size: 11px;
+  }
+}
+
+/* =========================================
+   RESPONSIVE DESIGN - MOBILE
+========================================= */
+
+@media (max-width: 520px) {
+  .admin-detail-topbar {
+    min-height: 68px;
+    padding: 0 14px;
+  }
+
+  .admin-detail-back-button {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  .admin-detail-brand {
+    gap: 5px;
+    font-size: 17px;
+  }
+
+  .admin-detail-brand svg {
+    width: 19px;
+  }
+
+  .admin-detail-brand span {
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+
+  .admin-detail-container {
+    width: calc(100% - 28px);
+  }
+
+  .admin-detail-heading {
+    padding: 27px 0 20px;
+  }
+
+  .admin-detail-heading h1 {
+    font-size: 25px;
+  }
+
+  .admin-detail-heading p {
+    font-size: 13px;
+  }
+
+  .admin-detail-main-card,
+  .admin-detail-section-card {
+    padding: 18px;
+    margin-bottom: 16px;
+    border-radius: 13px;
+  }
+
+  .admin-detail-card-header {
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .admin-detail-card-header h2 {
+    font-size: 19px;
+  }
+
+  .admin-detail-info-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .admin-detail-person-info {
+    grid-template-columns: 1fr;
+    gap: 17px;
+    padding: 15px;
+  }
+
+  .admin-detail-section-heading {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .admin-detail-section-heading > svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .admin-detail-section-heading h2 {
+    font-size: 15px;
+  }
+
+  .admin-detail-section-heading p {
+    font-size: 11px;
+  }
+
+  .admin-detail-progress {
+    gap: 2px;
+  }
+
+  .admin-detail-progress-step {
+    gap: 8px;
+  }
+
+  .admin-detail-progress-step > div {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .admin-detail-progress-step::before {
+    top: 14px;
+  }
+
+  .admin-detail-progress-step > span {
+    font-size: 9px;
+    line-height: 1.4;
+  }
+
+  .admin-detail-history-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .admin-detail-footer {
+    justify-content: stretch;
+  }
+
+  .admin-detail-footer button {
+    width: 100%;
+  }
+}

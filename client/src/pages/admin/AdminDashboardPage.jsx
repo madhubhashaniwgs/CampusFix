@@ -124,16 +124,24 @@ function AdminDashboardPage() {
       <main className="admin-dashboard-content">
         <section className="admin-welcome-section">
           <div>
-            <span className="admin-welcome-label">
-              ADMINISTRATION
-            </span>
+        <span className="admin-welcome-label">
+            ADMINISTRATION
+        </span>
 
-            <h1>Welcome, {user?.fullName}!</h1>
+        <h1>Welcome, {user?.fullName}!</h1>
 
-            <p>
-              Manage campus issues and monitor their progress.
-            </p>
-          </div>
+        <p>
+            Manage campus issues and monitor their progress.
+        </p>
+
+        <button
+            className="admin-manage-issues-button"
+            onClick={() => navigate('/admin/issues')}
+        >
+            <ClipboardList size={19} />
+            Manage All Issues
+        </button>
+        </div>
 
           <button
             className="admin-refresh-button"
