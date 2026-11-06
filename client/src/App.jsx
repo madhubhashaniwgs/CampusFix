@@ -10,6 +10,7 @@ import ReportIssuePage from './pages/student/ReportIssuePage';
 import MyIssuesPage from './pages/student/MyIssuesPage';
 import IssueDetailsPage from './pages/student/IssueDetailsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 import './App.css';
 
@@ -87,7 +88,7 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route
           path="/admin/dashboard"
-          element={<DashboardPage />}
+          element={<AdminDashboardPage />}
         />
       </Route>
 
