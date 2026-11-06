@@ -339,3 +339,54 @@ a {
     gap: 6px;
   }
 }
+
+
+.student-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 28px 0;
+}
+
+.student-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-action {
+  color: #ffffff;
+  background: #7c3aed;
+  border: 1px solid #7c3aed;
+}
+
+.primary-action:hover {
+  background: #6d28d9;
+}
+
+.secondary-action {
+  color: #6d28d9;
+  background: #ffffff;
+  border: 1px solid #d8c8f5;
+}
+
+.secondary-action:hover {
+  background: #f5f0ff;
+}
+
+@media (max-width: 500px) {
+  .student-actions {
+    flex-direction: column;
+  }
+
+  .student-action-button {
+    width: 100%;
+  }
+}

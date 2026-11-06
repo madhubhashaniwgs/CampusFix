@@ -1,6 +1,12 @@
+
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import {
+  LogOut,
+  ShieldCheck,
+  PlusCircle,
+  ClipboardList,
+} from 'lucide-react';
 
 function DashboardPage() {
   const { user, logout } = useAuth();
@@ -33,6 +39,26 @@ function DashboardPage() {
           <h1>Welcome, {user?.fullName}!</h1>
           <p>You are successfully logged in to CampusFix.</p>
         </div>
+
+        {user?.role === 'student' && (
+          <div className="student-actions">
+            <button
+              className="student-action-button primary-action"
+              onClick={() => navigate('/student/report-issue')}
+            >
+              <PlusCircle size={20} />
+              Report New Issue
+            </button>
+
+            <button
+              className="student-action-button secondary-action"
+              onClick={() => navigate('/student/my-issues')}
+            >
+              <ClipboardList size={20} />
+              My Issues
+            </button>
+          </div>
+        )}
 
         <div className="user-info-card">
           <h2>Account Information</h2>
