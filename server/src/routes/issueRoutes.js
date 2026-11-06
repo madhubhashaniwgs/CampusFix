@@ -2,6 +2,7 @@ import express from 'express';
 
 import issueController from '../controllers/issueController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
+import { validateAssignIssue } from '../validators/issueValidator.js';
 
 import {
   validateCreateIssue,
@@ -25,6 +26,19 @@ router.get(
 );
 
 router.get(
+  '/staff',
+  authorize('admin'),
+  issueController.getStaffMembers
+);
+
+router.patch(
+  '/:id/assign',
+  authorize('admin'),
+  validateAssignIssue,
+  issueController.assignIssue
+);
+
+router.get(
   '/:id',
   issueController.getIssueById
 );
@@ -35,5 +49,7 @@ router.patch(
   validateUpdateStatus,
   issueController.updateIssueStatus
 );
+
+
 
 export default router;
