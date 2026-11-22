@@ -3,11 +3,40 @@ import mongoose from 'mongoose';
 
 import issueRepository from '../repositories/issueRepository.js';
 import userRepository from '../repositories/userRepository.js';
+import cloudinaryService from './cloudinaryService.js';
 import ApiError from '../utils/ApiError.js';
+
+const isCloudinaryUrl = (photo) => {
+  if (typeof photo !== 'string' || !photo.startsWith('https://')) {
+    return false;
+  }
+  try {
+    return new URL(photo).hostname === 'res.cloudinary.com';
+  } catch {
+    return false;
+  }
+};
 
 class IssueService {
   async createIssue(issueData, userId) {
     const maxAttempts = 3;
+
+    // Cloudinary photos must carry a valid upload token proving the
+    // authenticated user uploaded this exact image. The public ID is
+    // derived server-side from the token — never trusted from the
+    // client. Legacy base64 photos need no token.
+    let photoPublicId = null;
+    if (isCloudinaryUrl(issueData.photo)) {
+      photoPublicId = cloudinaryService.verifyUploadToken(
+        issueData.photoToken,
+        userId,
+        issueData.photo
+      );
+
+      if (!photoPublicId) {
+        throw new ApiError(400, 'A valid photo upload token is required for Cloudinary images');
+      }
+    }
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const ticketId = `CF-${randomBytes(4).toString('hex').toUpperCase()}`;
@@ -20,6 +49,7 @@ class IssueService {
           location: issueData.location,
           priority: issueData.priority || 'medium',
           photo: issueData.photo || null,
+          photoPublicId,
           ticketId,
           reportedBy: userId,
           status: 'reported',
@@ -39,7 +69,20 @@ class IssueService {
           error.keyPattern &&
           Object.prototype.hasOwnProperty.call(error.keyPattern, 'ticketId');
 
+        // On final failure, remove the orphaned Cloudinary image so
+        // storage does not accumulate unused uploads. Cleanup errors
+        // are logged safely and never mask the original error.
         if (!isTicketIdConflict || attempt === maxAttempts - 1) {
+          if (photoPublicId) {
+            try {
+              await cloudinaryService.deleteImage(photoPublicId);
+            } catch (cleanupError) {
+              console.error(
+                `[${new Date().toISOString()}] Failed to clean up orphaned Cloudinary image ${photoPublicId}: ${cleanupError.message}`
+              );
+            }
+          }
+
           if (isTicketIdConflict) {
             throw new ApiError(500, 'Unable to generate a unique ticket ID. Please try again.');
           }

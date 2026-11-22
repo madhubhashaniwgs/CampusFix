@@ -44,16 +44,26 @@ export const validateCreateIssue = (req, res, next) => {
     errors.push('Please select a valid priority');
   }
 
-  // Optional photo: must be a JPEG/PNG/WebP data URL within a
-  // bounded size to keep documents small.
+  // Optional photo: either a legacy JPEG/PNG/WebP data URL within
+  // a bounded size, or an HTTPS URL hosted on res.cloudinary.com.
   const MAX_PHOTO_LENGTH = 1_500_000;
   if (photo !== undefined && photo !== null && photo !== '') {
-    if (
-      typeof photo !== 'string' ||
-      !photo.startsWith('data:image/') ||
-      photo.length > MAX_PHOTO_LENGTH
-    ) {
-      errors.push('Photo must be a valid image under 1.5MB');
+    const isLegacyDataUrl =
+      typeof photo === 'string' &&
+      photo.startsWith('data:image/') &&
+      photo.length <= MAX_PHOTO_LENGTH;
+
+    let isCloudinaryUrl = false;
+    if (typeof photo === 'string' && photo.startsWith('https://')) {
+      try {
+        isCloudinaryUrl = new URL(photo).hostname === 'res.cloudinary.com';
+      } catch {
+        isCloudinaryUrl = false;
+      }
+    }
+
+    if (!isLegacyDataUrl && !isCloudinaryUrl) {
+      errors.push('Photo must be a valid image data URL or a Cloudinary image URL');
     }
   }
 

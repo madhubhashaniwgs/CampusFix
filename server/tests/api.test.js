@@ -1,4 +1,4 @@
-import { test, before, after, describe } from 'node:test';
+import { test, before, after, afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -880,9 +880,7 @@ describe('Staff approval edge cases', () => {
     await loginAs('admin_edge5@test.com');
 
     const list = await api('GET', '/api/admin/users?role=staff&status=active');
-    const target = list.body.data.users.find(
-      (u) => u.email === 'edge_active_staff@test.com'
-    );
+    const target = list.body.data.users.find((u) => u.email === 'edge_active_staff@test.com');
     assert.ok(target);
 
     const res = await api('PATCH', `/api/admin/staff/${target.id}/reject`);
@@ -900,20 +898,14 @@ describe('Staff approval edge cases', () => {
     await createUserDirect({ email: 'admin_edge6@test.com', role: 'admin' });
     await loginAs('admin_edge6@test.com');
 
-    const missing = await api(
-      'PATCH',
-      '/api/admin/staff/000000000000000000000000/approve'
-    );
+    const missing = await api('PATCH', '/api/admin/staff/000000000000000000000000/approve');
     assert.equal(missing.status, 404);
 
     const invalid = await api('PATCH', '/api/admin/staff/not-an-id/approve');
     assert.equal(invalid.status, 400);
     assert.match(invalid.body.message, /invalid/i);
 
-    const invalidReject = await api(
-      'PATCH',
-      '/api/admin/staff/not-an-id/reject'
-    );
+    const invalidReject = await api('PATCH', '/api/admin/staff/not-an-id/reject');
     assert.equal(invalidReject.status, 400);
   });
 
@@ -923,9 +915,7 @@ describe('Staff approval edge cases', () => {
     await loginAs('admin_edge7@test.com');
 
     const list = await api('GET', '/api/admin/users?role=student');
-    const target = list.body.data.users.find(
-      (u) => u.email === 'edge_student@test.com'
-    );
+    const target = list.body.data.users.find((u) => u.email === 'edge_student@test.com');
 
     const approve = await api('PATCH', `/api/admin/staff/${target.id}/approve`);
     assert.equal(approve.status, 400);
@@ -976,5 +966,483 @@ describe('Staff approval edge cases', () => {
     assert.equal(stf.status, 403);
     const stfRej = await api('PATCH', `/api/admin/staff/${id}/reject`);
     assert.equal(stfRej.status, 403);
+  });
+});
+
+describe('Image upload endpoint', () => {
+  const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+
+  const validPng = () => Buffer.concat([PNG_HEADER, Buffer.alloc(64, 1)]);
+
+  const uploadPhoto = async ({
+    file = null,
+    mime = 'image/png',
+    authed = true,
+    withCsrf = true,
+  } = {}) => {
+    const form = new FormData();
+    if (file) {
+      form.append('photo', new Blob([file], { type: mime }), 'photo.png');
+    }
+
+    const headers = {};
+    if (authed) {
+      headers.Cookie = Object.entries(jar)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('; ');
+    } else if (withCsrf) {
+      headers.Cookie = `csrf_token=${jar.csrf_token}`;
+    }
+    if (withCsrf) headers['X-CSRF-Token'] = jar.csrf_token;
+
+    const res = await fetch(`${baseUrl}/api/issues/upload`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      // non-JSON
+    }
+    return { status: res.status, body };
+  };
+
+  let cloudinaryService;
+  let originalUpload;
+
+  before(async () => {
+    cloudinaryService = (await import('../src/services/cloudinaryService.js')).default;
+    originalUpload = cloudinaryService.uploadImage;
+  });
+
+  afterEach(() => {
+    cloudinaryService.uploadImage = originalUpload;
+  });
+
+  test('successful upload returns secure URL and public ID', async () => {
+    await createUserDirect({ email: 'upload_student@test.com', role: 'student' });
+    await loginAs('upload_student@test.com');
+
+    cloudinaryService.uploadImage = async () => ({
+      url: 'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/abc.jpg',
+      publicId: 'campusfix/issues/abc',
+    });
+
+    const res = await uploadPhoto({ file: validPng() });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.success, true);
+    assert.match(res.body.data.url, /^https:\/\/res\.cloudinary\.com\//);
+    assert.ok(res.body.data.publicId);
+    assert.equal(res.body.data.api_secret, undefined);
+    assert.equal(res.body.data.cloudinary_secret, undefined);
+  });
+
+  test('missing file is rejected', async () => {
+    await createUserDirect({ email: 'upload_nofile@test.com', role: 'student' });
+    await loginAs('upload_nofile@test.com');
+
+    const res = await uploadPhoto({ file: null });
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /no image file/i);
+  });
+
+  test('unsupported MIME type is rejected', async () => {
+    await createUserDirect({ email: 'upload_mime@test.com', role: 'student' });
+    await loginAs('upload_mime@test.com');
+
+    const res = await uploadPhoto({
+      file: Buffer.from('plain text'),
+      mime: 'text/plain',
+    });
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /jpeg, png or webp/i);
+  });
+
+  test('invalid image signature is rejected despite image MIME', async () => {
+    await createUserDirect({ email: 'upload_sig@test.com', role: 'student' });
+    await loginAs('upload_sig@test.com');
+
+    const res = await uploadPhoto({
+      file: Buffer.from('this is not really a png file at all......'),
+      mime: 'image/png',
+    });
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /not a valid image/i);
+  });
+
+  test('oversized file is rejected', async () => {
+    await createUserDirect({ email: 'upload_big@test.com', role: 'student' });
+    await loginAs('upload_big@test.com');
+
+    const big = Buffer.concat([PNG_HEADER, Buffer.alloc(5 * 1024 * 1024 + 100, 1)]);
+    const res = await uploadPhoto({ file: big });
+    assert.equal(res.status, 413);
+    assert.match(res.body.message, /5mb/i);
+  });
+
+  test('unauthenticated request is rejected', async () => {
+    const res = await uploadPhoto({ file: validPng(), authed: false });
+    assert.equal(res.status, 401);
+  });
+
+  test('request without CSRF token is rejected', async () => {
+    await createUserDirect({ email: 'upload_csrf@test.com', role: 'student' });
+    await loginAs('upload_csrf@test.com');
+
+    const res = await uploadPhoto({ file: validPng(), withCsrf: false });
+    assert.equal(res.status, 403);
+  });
+
+  test('missing Cloudinary configuration fails safely', async () => {
+    await createUserDirect({ email: 'upload_noconfig@test.com', role: 'student' });
+    await loginAs('upload_noconfig@test.com');
+
+    const ApiError = (await import('../src/utils/ApiError.js')).default;
+    cloudinaryService.uploadImage = async () => {
+      throw new ApiError(503, 'Photo storage is not configured.');
+    };
+
+    const res = await uploadPhoto({ file: validPng() });
+    assert.equal(res.status, 503);
+    assert.match(res.body.message, /not configured/i);
+  });
+
+  test('Cloudinary upload failure returns consistent error', async () => {
+    await createUserDirect({ email: 'upload_fail@test.com', role: 'student' });
+    await loginAs('upload_fail@test.com');
+
+    const ApiError = (await import('../src/utils/ApiError.js')).default;
+    cloudinaryService.uploadImage = async () => {
+      throw new ApiError(502, 'Failed to upload image to storage');
+    };
+
+    const res = await uploadPhoto({ file: validPng() });
+    assert.equal(res.status, 502);
+    assert.match(res.body.message, /failed to upload/i);
+  });
+
+  test('upload rate limiter eventually returns 429', async () => {
+    await createUserDirect({ email: 'upload_rate@test.com', role: 'student' });
+    await loginAs('upload_rate@test.com');
+
+    cloudinaryService.uploadImage = async () => ({
+      url: 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg',
+      publicId: 'x',
+    });
+
+    // Prior tests consumed some quota; fire until limited (max 25).
+    let saw429 = false;
+    for (let i = 0; i < 25; i++) {
+      const res = await uploadPhoto({ file: validPng() });
+      if (res.status === 429) {
+        saw429 = true;
+        assert.match(res.body.message, /too many upload/i);
+        break;
+      }
+      assert.equal(res.status, 201);
+    }
+    assert.ok(saw429, 'expected rate limiter to return 429 within 25 requests');
+  });
+});
+
+describe('Cloudinary photo integration in issue creation', () => {
+  const CLOUDINARY_URL =
+    'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/photo123.jpg';
+  const PUBLIC_ID = 'campusfix/issues/photo123';
+
+  let cloudinaryService;
+  let issueRepository;
+  let originalDelete;
+  let originalCreate;
+
+  before(async () => {
+    cloudinaryService = (await import('../src/services/cloudinaryService.js')).default;
+    issueRepository = (await import('../src/repositories/issueRepository.js')).default;
+    originalDelete = cloudinaryService.deleteImage;
+    originalCreate = issueRepository.create;
+  });
+
+  afterEach(() => {
+    cloudinaryService.deleteImage = originalDelete;
+    issueRepository.create = originalCreate;
+  });
+
+  const createStudentAndLogin = async (email) => {
+    await createUserDirect({ email, role: 'student' });
+    await loginAs(email);
+  };
+
+  const photoTokenFor = (userId, pid = PUBLIC_ID, url = CLOUDINARY_URL) =>
+    cloudinaryService.signUploadToken(pid, userId, url);
+
+  const studentIdOf = async (email) => {
+    const u = await User.findOne({ email });
+    return u._id.toString();
+  };
+
+  test('issue creation with valid Cloudinary URL and token stores both', async () => {
+    await createStudentAndLogin('cloud_student@test.com');
+    const uid = await studentIdOf('cloud_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Broken projector',
+        description: 'Projector in room 204 is dead',
+        category: 'it',
+        location: 'Engineering Block',
+        priority: 'high',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.photo, CLOUDINARY_URL);
+    assert.equal(res.body.data.photoPublicId, PUBLIC_ID);
+  });
+
+  test('legacy base64 photo still works without token', async () => {
+    await createStudentAndLogin('legacy_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Leaky tap',
+        description: 'Water dripping constantly',
+        category: 'plumbing',
+        location: 'Hostel C',
+        photo: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD',
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.ok(res.body.data.photo.startsWith('data:image/'));
+    assert.equal(res.body.data.photoPublicId, null);
+  });
+
+  test('issue creation without photo works', async () => {
+    await createStudentAndLogin('nophoto_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Squeaky door',
+        description: 'Door hinge needs oil',
+        category: 'other',
+        location: 'Library',
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.photo, null);
+    assert.equal(res.body.data.photoPublicId, null);
+  });
+
+  test('non-HTTPS photo URLs are rejected', async () => {
+    await createStudentAndLogin('http_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Bad photo',
+        description: 'Trying insecure URL',
+        category: 'other',
+        location: 'Lab',
+        photo: 'http://res.cloudinary.com/demo/image/upload/v1/x.jpg',
+      },
+    });
+
+    assert.equal(res.status, 400);
+  });
+
+  test('lookalike Cloudinary domains are rejected', async () => {
+    await createStudentAndLogin('lookalike_student@test.com');
+
+    for (const bad of [
+      'https://res.cloudinary.com.evil.com/x.jpg',
+      'https://notres.cloudinary.com/x.jpg',
+      'https://evil.com/res.cloudinary.com/x.jpg',
+    ]) {
+      const res = await api('POST', '/api/issues', {
+        body: {
+          title: 'Phishing attempt',
+          description: 'Lookalike domain test',
+          category: 'other',
+          location: 'Cafeteria',
+          photo: bad,
+        },
+      });
+      assert.equal(res.status, 400, `expected 400 for ${bad}`);
+    }
+  });
+
+  test('arbitrary external HTTPS URLs are rejected', async () => {
+    await createStudentAndLogin('external_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'External image',
+        description: 'Not a cloudinary url',
+        category: 'other',
+        location: 'Gym',
+        photo: 'https://example.com/image.jpg',
+      },
+    });
+
+    assert.equal(res.status, 400);
+  });
+
+  test('Cloudinary URL without token or with foreign token is rejected', async () => {
+    await createStudentAndLogin('notoken_student@test.com');
+    await createStudentAndLogin('othertoken_student@test.com');
+
+    // No token at all
+    const noToken = await api('POST', '/api/issues', {
+      body: {
+        title: 'No token',
+        description: 'Missing upload token',
+        category: 'other',
+        location: 'Room 1',
+        photo: CLOUDINARY_URL,
+      },
+    });
+    assert.equal(noToken.status, 400);
+    assert.match(noToken.body.message, /upload token/i);
+
+    // Token minted for a different user — log back in as the
+    // original student so the foreign token is genuinely foreign.
+    const otherUid = await studentIdOf('othertoken_student@test.com');
+    await loginAs('notoken_student@test.com');
+    const foreign = await api('POST', '/api/issues', {
+      body: {
+        title: 'Stolen token',
+        description: 'Token belongs to another user',
+        category: 'other',
+        location: 'Room 2',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(otherUid),
+      },
+    });
+    assert.equal(foreign.status, 400);
+  });
+
+  test('URL/token mismatch is rejected even for the same user', async () => {
+    await createStudentAndLogin('mismatch_student@test.com');
+    const uid = await studentIdOf('mismatch_student@test.com');
+
+    const OTHER_URL =
+      'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/other456.jpg';
+
+    // Token was minted for CLOUDINARY_URL; submitting OTHER_URL
+    // with that token must be rejected — prevents storing image B's
+    // URL alongside image A's publicId.
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Swapped photo',
+        description: 'Token belongs to a different image URL',
+        category: 'other',
+        location: 'Room 3',
+        photo: OTHER_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /upload token/i);
+
+    // Correct URL + token still succeeds.
+    const ok = await api('POST', '/api/issues', {
+      body: {
+        title: 'Correct pairing',
+        description: 'URL and token match',
+        category: 'it',
+        location: 'Room 4',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+    assert.equal(ok.status, 201);
+    assert.equal(ok.body.data.photoPublicId, PUBLIC_ID);
+  });
+
+  test('failed issue creation deletes the orphaned Cloudinary image', async () => {
+    await createStudentAndLogin('orphan_student@test.com');
+    const uid = await studentIdOf('orphan_student@test.com');
+
+    const deleted = [];
+    cloudinaryService.deleteImage = async (pid) => {
+      deleted.push(pid);
+    };
+    issueRepository.create = async () => {
+      const err = new Error('db exploded');
+      err.code = 99999;
+      throw err;
+    };
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Will fail',
+        description: 'Triggers repository error',
+        category: 'other',
+        location: 'Basement',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(deleted, [PUBLIC_ID]);
+  });
+
+  test('successful creation does not delete the image', async () => {
+    await createStudentAndLogin('keepimage_student@test.com');
+    const uid = await studentIdOf('keepimage_student@test.com');
+
+    const deleted = [];
+    cloudinaryService.deleteImage = async (pid) => {
+      deleted.push(pid);
+    };
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Keep my photo',
+        description: 'Image should be retained',
+        category: 'it',
+        location: 'Server room',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.deepEqual(deleted, []);
+  });
+
+  test('cleanup failure does not hide the original error', async () => {
+    await createStudentAndLogin('cleanupfail_student@test.com');
+    const uid = await studentIdOf('cleanupfail_student@test.com');
+
+    cloudinaryService.deleteImage = async () => {
+      throw new Error('cloudinary unreachable');
+    };
+    issueRepository.create = async () => {
+      const err = new Error('db exploded');
+      err.code = 99999;
+      throw err;
+    };
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Double failure',
+        description: 'Both create and cleanup fail',
+        category: 'other',
+        location: 'Attic',
+        photo: CLOUDINARY_URL,
+        photoToken: photoTokenFor(uid),
+      },
+    });
+
+    // Original DB error surfaces, not the cleanup error.
+    assert.equal(res.status, 500);
   });
 });

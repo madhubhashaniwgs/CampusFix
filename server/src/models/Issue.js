@@ -41,9 +41,16 @@ const issueSchema = new mongoose.Schema(
       default: 'medium',
     },
 
-    // Optional photo attached to the report, stored as a
-    // compressed JPEG data URL (validated to a bounded size).
+    // Optional photo attached to the report. Either a legacy
+    // compressed JPEG data URL or a Cloudinary secure URL; for
+    // Cloudinary photos, photoPublicId stores the asset ID used
+    // for later cleanup. Legacy records have no public ID.
     photo: {
+      type: String,
+      default: null,
+    },
+
+    photoPublicId: {
       type: String,
       default: null,
     },

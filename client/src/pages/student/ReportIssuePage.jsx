@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -20,7 +20,7 @@ import {
 
 import AppLayout from '../../components/layouts/AppLayout';
 import ImageModal from '../../components/common/ImageModal';
-import { createIssue } from '../../services/issueService';
+import { createIssue, uploadIssuePhoto } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
 
 const CATEGORIES = [
@@ -111,12 +111,32 @@ export default function ReportIssuePage() {
     priority: 'medium',
   });
 
-  const [photo, setPhoto] = useState(null);
+  // photoBlob holds the compressed JPEG Blob for upload;
+  // photoPreview is a local object URL for display only.
+  const [photoBlob, setPhotoBlob] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
   const [photoInfo, setPhotoInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const previewUrlRef = useRef('');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
+
+  const setPreviewUrl = (url) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+    previewUrlRef.current = url;
+    setPhotoPreview(url);
+  };
 
   const handlePhotoChange = (event) => {
     const file = event.target.files?.[0];
@@ -137,16 +157,30 @@ export default function ReportIssuePage() {
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
 
-        setPhoto(dataUrl);
-        setPhotoPreview(dataUrl);
-        setPhotoInfo({
-          name: file.name,
-          dimensions: `${canvas.width} x ${canvas.height} px`,
-          size: `${Math.round((dataUrl.length * 0.75) / 1024)} KB`,
-        });
-        success('Photo attached & optimized successfully!');
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              toastError('Unable to process the selected image.');
+              return;
+            }
+
+            const uploadFile = new File([blob], 'issue-photo.jpg', {
+              type: 'image/jpeg',
+            });
+
+            setPhotoBlob(uploadFile);
+            setPreviewUrl(URL.createObjectURL(uploadFile));
+            setPhotoInfo({
+              name: file.name,
+              dimensions: `${canvas.width} x ${canvas.height} px`,
+              size: `${Math.max(1, Math.round(blob.size / 1024))} KB`,
+            });
+            success('Photo attached & optimized successfully!');
+          },
+          'image/jpeg',
+          0.75
+        );
       };
       img.src = reader.result;
     };
@@ -154,8 +188,8 @@ export default function ReportIssuePage() {
   };
 
   const removePhoto = () => {
-    setPhoto(null);
-    setPhotoPreview('');
+    setPhotoBlob(null);
+    setPreviewUrl('');
     setPhotoInfo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -185,10 +219,25 @@ export default function ReportIssuePage() {
 
     try {
       setLoading(true);
-      const res = await createIssue({ ...formData, photo });
+
+      // Upload the photo first (if present); the backend returns a
+      // Cloudinary URL plus a signed token binding it to this user.
+      let photoPayload = {};
+      if (photoBlob) {
+        setUploading(true);
+        const upload = await uploadIssuePhoto(photoBlob);
+        setUploading(false);
+        photoPayload = {
+          photo: upload.data.url,
+          photoToken: upload.data.photoToken,
+        };
+      }
+
+      const res = await createIssue({ ...formData, ...photoPayload });
       success(`Ticket ${res.data?.ticketId || ''} created successfully!`, 'Issue Reported');
       navigate('/student/my-issues', { replace: true });
     } catch (err) {
+      setUploading(false);
       toastError(
         err.response?.data?.message ||
           'Unable to submit your issue. Please check all fields and try again.'
@@ -433,7 +482,11 @@ export default function ReportIssuePage() {
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-purple-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {loading ? (
-                  <>Submitting Ticket...</>
+                  uploading ? (
+                    <>Uploading Photo...</>
+                  ) : (
+                    <>Submitting Ticket...</>
+                  )
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />

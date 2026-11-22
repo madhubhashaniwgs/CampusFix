@@ -6,6 +6,18 @@ export const createIssue = async (issueData) => {
   return response.data;
 };
 
+// Upload an issue photo to Cloudinary via the backend.
+// Returns { url, publicId, photoToken }.
+export const uploadIssuePhoto = async (file) => {
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  // Do NOT set Content-Type manually — Axios must generate the
+  // multipart boundary itself.
+  const response = await apiClient.post('/issues/upload', formData);
+  return response.data;
+};
+
 // Get issues relevant to the logged-in user's role.
 // Supports pagination, filters and search via query params.
 export const getIssues = async (params = {}) => {

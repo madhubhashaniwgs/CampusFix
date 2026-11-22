@@ -1,7 +1,28 @@
 import issueService from '../services/issueService.js';
+import cloudinaryService from '../services/cloudinaryService.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
 class IssueController {
+  uploadImage = async (req, res, next) => {
+    try {
+      // Folder is fixed server-side; clients cannot choose it.
+      const { url, publicId } = await cloudinaryService.uploadImage(req.file.buffer);
+
+      // Token proves this user uploaded this image; required when the
+      // URL is later attached to an issue.
+      const photoToken = cloudinaryService.signUploadToken(publicId, req.user.id, url);
+
+      res.status(201).json(
+        new ApiResponse(201, 'Image uploaded successfully', {
+          url,
+          publicId,
+          photoToken,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
   createIssue = async (req, res, next) => {
     try {
       const issue = await issueService.createIssue(req.body, req.user.id);

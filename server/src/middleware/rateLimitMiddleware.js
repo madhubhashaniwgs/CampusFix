@@ -28,3 +28,11 @@ export const loginRateLimiter = isTest
 export const registerRateLimiter = isTest
   ? passthrough
   : createRateLimiter('Too many registration attempts. Please try again in 15 minutes.');
+
+// Image uploads are heavier than auth requests, so they get a
+// dedicated, more generous limit: 20 uploads per 15 minutes per IP.
+// Always active (including tests) since real uploads are infrequent.
+export const uploadRateLimiter = createRateLimiter(
+  'Too many upload attempts. Please try again in 15 minutes.',
+  { max: 20 }
+);
