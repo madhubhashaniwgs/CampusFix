@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import mongoose from 'mongoose';
 
 import issueRepository from '../repositories/issueRepository.js';
+import userRepository from '../repositories/userRepository.js';
 import ApiError from '../utils/ApiError.js';
 
 class IssueService {
@@ -126,7 +127,7 @@ class IssueService {
       );
     }
 
-    const updatedIssue = await issueRepository.findByIdAndUpdate(
+    return issueRepository.findByIdAndUpdate(
       issueId,
       {
         $set: { status },
@@ -140,8 +141,6 @@ class IssueService {
         },
       }
     );
-
-    return issueRepository.findById(updatedIssue._id);
   }
 
     async getStaffMembers() {
@@ -162,27 +161,38 @@ class IssueService {
         throw new ApiError(404, 'Issue not found');
     }
 
-    const staff = await issueRepository.findStaffMembers();
+    // Assignment sets status to 'assigned', so it is only valid from
+    // 'reported' (first assignment) or 'assigned' (reassignment).
+    // This reuses the same transition rules as updateIssueStatus and
+    // prevents in_progress/resolved/rejected issues from being reset.
+    if (!['reported', 'assigned'].includes(issue.status)) {
+        throw new ApiError(
+        400,
+        `Cannot assign an issue with status "${issue.status}"`
+        );
+    }
 
-    const selectedStaff = staff.find(
-        (member) => member._id.toString() === staffId
-    );
+    const staff = await userRepository.findActiveStaffById(staffId);
 
-    if (!selectedStaff) {
+    if (!staff) {
         throw new ApiError(404, 'Active staff member not found');
     }
 
-    if (['resolved', 'rejected'].includes(issue.status)) {
-        throw new ApiError(
-        400,
-        'Cannot assign a resolved or rejected issue'
-        );
+    // Re-assigning the same staff member is a no-op: return the
+    // already-populated issue without writing a duplicate history entry.
+    if (issue.assignedTo?._id.toString() === staffId) {
+        return issue;
     }
+
+    const isReassignment = Boolean(issue.assignedTo);
 
     return issueRepository.assignStaff(
         issueId,
         staffId,
-        adminId
+        adminId,
+        isReassignment
+            ? 'Issue reassigned to staff member'
+            : 'Issue assigned to staff member'
     );
     }
 }

@@ -20,6 +20,14 @@ class UserRepository {
   async emailExists(email) {
     return User.exists({ email });
   }
+
+  async findActiveStaffById(userId) {
+    return User.findOne({
+      _id: userId,
+      role: 'staff',
+      isActive: true,
+    }).select('fullName email');
+  }
 }
 
 export default new UserRepository();

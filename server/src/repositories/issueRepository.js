@@ -20,25 +20,15 @@ class IssueRepository {
       .sort({ createdAt: -1 });
   }
 
-  async updateById(issueId, updateData) {
-    return Issue.findByIdAndUpdate(
-      issueId,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    )
-      .populate('reportedBy', 'fullName email')
-      .populate('assignedTo', 'fullName email');
-  }
-
   async findByIdAndUpdate(issueId, updateData) {
     return Issue.findByIdAndUpdate(
       issueId,
       updateData,
       { new: true, runValidators: true }
-    );
+    )
+      .populate('reportedBy', 'fullName email')
+      .populate('assignedTo', 'fullName email')
+      .populate('statusHistory.updatedBy', 'fullName');
   }
 
   async findStaffMembers() {
@@ -48,7 +38,7 @@ class IssueRepository {
     }).select('fullName email');
  }
 
-    async assignStaff(issueId, staffId, adminId) {
+    async assignStaff(issueId, staffId, adminId, note) {
     return Issue.findByIdAndUpdate(
         issueId,
         {
@@ -60,7 +50,7 @@ class IssueRepository {
             statusHistory: {
             status: 'assigned',
             updatedBy: adminId,
-            note: 'Issue assigned to staff member',
+            note: note || 'Issue assigned to staff member',
             updatedAt: new Date(),
             },
         },
