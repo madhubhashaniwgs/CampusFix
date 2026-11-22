@@ -17,12 +17,28 @@ class AuthService {
 
     const hashedPassword = await bcrypt.hash(userData.password, 12);
 
+    // Public registration allows student or staff only. Staff
+    // self-registrations require admin approval before they can log in.
+    const role = userData.role === 'staff' ? 'staff' : 'student';
+
     const user = await userRepository.create({
       fullName,
       email,
       password: hashedPassword,
-      // Never accept role from public registration.
-      role: 'student',
+      role,
+      status: role === 'staff' ? 'pending' : 'active',
+      studentId:
+        role === 'student' && userData.studentId
+          ? String(userData.studentId).trim()
+          : null,
+      staffId:
+        role === 'staff' && userData.staffId
+          ? String(userData.staffId).trim()
+          : null,
+      department:
+        role === 'staff' && userData.department
+          ? String(userData.department).trim()
+          : null,
     });
 
     const token = generateToken(user._id, user.tokenVersion ?? 0);
@@ -33,6 +49,7 @@ class AuthService {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        status: user.status,
       },
       token,
     };
@@ -49,6 +66,22 @@ class AuthService {
 
     if (!user.isActive) {
       throw new ApiError(403, 'Your account is inactive');
+    }
+
+    // Staff accounts created via public registration stay blocked
+    // until an admin approves them.
+    if (user.role === 'staff' && user.status === 'pending') {
+      throw new ApiError(
+        403,
+        'Your staff account is pending admin approval.'
+      );
+    }
+
+    if (user.role === 'staff' && user.status === 'rejected') {
+      throw new ApiError(
+        403,
+        'Your staff registration request was rejected.'
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(

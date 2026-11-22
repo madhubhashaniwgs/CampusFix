@@ -29,6 +29,32 @@ const userSchema = new mongoose.Schema(
       default: 'student',
     },
 
+    // Account lifecycle. Students are active immediately; staff who
+    // self-register start as 'pending' until an admin approves them.
+    status: {
+      type: String,
+      enum: ['active', 'pending', 'rejected'],
+      default: 'active',
+    },
+
+    studentId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    staffId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    department: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

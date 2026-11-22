@@ -59,6 +59,8 @@ class IssueRepository {
     return User.find({
         role: 'staff',
         isActive: true,
+        // Treat missing status (pre-migration docs) as active.
+        $or: [{ status: 'active' }, { status: { $exists: false } }],
     }).select('fullName email');
  }
 

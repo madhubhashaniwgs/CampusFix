@@ -719,3 +719,129 @@ describe('API reliability', () => {
     assert.equal(res.body.stack, undefined);
   });
 });
+
+describe('Staff self-registration approval', () => {
+  test('staff registers as pending, login blocked until admin approves', async () => {
+    // Staff self-registration
+    const reg = await api('POST', '/api/auth/register', {
+      body: {
+        role: 'staff',
+        fullName: 'Pending Staff',
+        email: 'pendingstaff@test.com',
+        staffId: 'STF-900',
+        department: 'IT',
+        password: VALID_PASSWORD,
+      },
+    });
+    assert.equal(reg.status, 201);
+    assert.equal(reg.body.data.user.status, 'pending');
+
+    // No session cookie should be set for pending staff
+    assert.ok(
+      !reg.setCookie.some((c) => c.startsWith('campusfix_token=')),
+      'pending staff must not receive an auth cookie'
+    );
+
+    // Login is blocked while pending
+    const blocked = await api('POST', '/api/auth/login', {
+      body: { email: 'pendingstaff@test.com', password: VALID_PASSWORD },
+    });
+    assert.equal(blocked.status, 403);
+    assert.match(blocked.body.message, /pending admin approval/i);
+
+    // Admin lists pending users
+    await createUserDirect({ email: 'admin_appr@test.com', role: 'admin' });
+    await loginAs('admin_appr@test.com');
+
+    const list = await api('GET', '/api/admin/users?role=staff&status=pending');
+    assert.equal(list.status, 200);
+    const pending = list.body.data.find(
+      (u) => u.email === 'pendingstaff@test.com'
+    );
+    assert.ok(pending);
+    assert.equal(pending.staffId, 'STF-900');
+    assert.equal(pending.department, 'IT');
+
+    // Approve
+    const approve = await api(
+      'PATCH',
+      `/api/admin/staff/${pending.id}/approve`
+    );
+    assert.equal(approve.status, 200);
+    assert.equal(approve.body.data.status, 'active');
+
+    // Login now works
+    await loginAs('pendingstaff@test.com');
+    const me = await api('GET', '/api/auth/me');
+    assert.equal(me.status, 200);
+    assert.equal(me.body.data.role, 'staff');
+  });
+
+  test('rejected staff cannot log in; students stay active immediately', async () => {
+    // Student self-registration gets active status + cookie
+    const stu = await api('POST', '/api/auth/register', {
+      body: {
+        role: 'student',
+        fullName: 'Active Student',
+        email: 'activestudent@test.com',
+        studentId: '2024CS001',
+        password: VALID_PASSWORD,
+      },
+    });
+    assert.equal(stu.status, 201);
+    assert.equal(stu.body.data.user.status, 'active');
+    assert.ok(
+      stu.setCookie.some((c) => c.startsWith('campusfix_token=')),
+      'active student should receive an auth cookie'
+    );
+
+    // Staff rejected flow
+    const reg = await api('POST', '/api/auth/register', {
+      body: {
+        role: 'staff',
+        fullName: 'Rejected Staff',
+        email: 'rejectedstaff@test.com',
+        staffId: 'STF-901',
+        department: 'HR',
+        password: VALID_PASSWORD,
+      },
+    });
+    assert.equal(reg.status, 201);
+
+    await createUserDirect({ email: 'admin_rej@test.com', role: 'admin' });
+    await loginAs('admin_rej@test.com');
+
+    const users = await api('GET', '/api/admin/users?role=staff&status=pending');
+    const target = users.body.data.find(
+      (u) => u.email === 'rejectedstaff@test.com'
+    );
+    assert.ok(target);
+
+    const reject = await api(
+      'PATCH',
+      `/api/admin/staff/${target.id}/reject`
+    );
+    assert.equal(reject.status, 200);
+    assert.equal(reject.body.data.status, 'rejected');
+
+    const blocked = await api('POST', '/api/auth/login', {
+      body: { email: 'rejectedstaff@test.com', password: VALID_PASSWORD },
+    });
+    assert.equal(blocked.status, 403);
+    assert.match(blocked.body.message, /rejected/i);
+  });
+
+  test('non-admin cannot access admin user endpoints', async () => {
+    await createUserDirect({ email: 'student_na@test.com', role: 'student' });
+    await loginAs('student_na@test.com');
+
+    const list = await api('GET', '/api/admin/users');
+    assert.equal(list.status, 403);
+
+    const approve = await api(
+      'PATCH',
+      '/api/admin/staff/000000000000000000000000/approve'
+    );
+    assert.equal(approve.status, 403);
+  });
+});

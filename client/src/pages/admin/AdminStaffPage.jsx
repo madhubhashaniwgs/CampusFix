@@ -17,8 +17,14 @@ import {
 import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
 import { getStaffMembers } from '../../services/issueService';
-import { createStaffMember } from '../../services/userService';
+import {
+  createStaffMember,
+  getUsers,
+  approveStaff,
+  rejectStaff,
+} from '../../services/userService';
 import { useToast } from '../../context/ToastContext';
+import { Check, X as XIcon, Clock } from 'lucide-react';
 
 const emptyForm = {
   fullName: '',
@@ -32,6 +38,7 @@ export default function AdminStaffPage() {
   const { success, error: toastError } = useToast();
 
   const [staffMembers, setStaffMembers] = useState([]);
+  const [pendingStaff, setPendingStaff] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -42,8 +49,12 @@ export default function AdminStaffPage() {
   const fetchStaff = async () => {
     try {
       setLoading(true);
-      const res = await getStaffMembers();
-      setStaffMembers(res.data || []);
+      const [staffRes, pendingRes] = await Promise.all([
+        getStaffMembers(),
+        getUsers({ role: 'staff', status: 'pending' }),
+      ]);
+      setStaffMembers(staffRes.data || []);
+      setPendingStaff(pendingRes.data || []);
     } catch (err) {
       toastError(err.response?.data?.message || 'Unable to load staff directory.');
     } finally {
@@ -91,6 +102,26 @@ export default function AdminStaffPage() {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApprove = async (member) => {
+    try {
+      await approveStaff(member.id);
+      success(`${member.fullName} approved and can now sign in.`, 'Staff Approved');
+      await fetchStaff();
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to approve staff member.');
+    }
+  };
+
+  const handleReject = async (member) => {
+    try {
+      await rejectStaff(member.id);
+      success(`${member.fullName}'s registration was rejected.`, 'Registration Rejected');
+      await fetchStaff();
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to reject staff member.');
     }
   };
 
@@ -286,6 +317,61 @@ export default function AdminStaffPage() {
           </span>
         </div>
       </div>
+
+      {/* Pending Staff Approvals */}
+      {pendingStaff.length > 0 && (
+        <div className="purple-card rounded-3xl p-5 sm:p-6 mb-6 border-2 border-amber-300/60 bg-amber-50/40">
+          <div className="flex items-center gap-2.5 mb-4">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-black text-purple-950">
+              Pending Staff Approvals
+            </h2>
+            <span className="ml-auto text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full">
+              {pendingStaff.length} waiting
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {pendingStaff.map((member) => (
+              <div
+                key={member.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/90 border border-amber-200 rounded-2xl p-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-extrabold text-purple-950 truncate">
+                    {member.fullName}
+                  </p>
+                  <p className="text-xs text-purple-800/70 font-medium truncate">
+                    {member.email}
+                  </p>
+                  <p className="text-[11px] text-purple-700/60 font-semibold mt-0.5">
+                    {member.staffId && `Staff ID: ${member.staffId}`}
+                    {member.staffId && member.department && ' · '}
+                    {member.department && `Dept: ${member.department}`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleApprove(member)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(member)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl transition-colors"
+                  >
+                    <XIcon className="w-4 h-4" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Staff Grid Cards */}
       {loading ? (

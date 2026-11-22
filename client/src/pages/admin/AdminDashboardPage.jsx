@@ -25,6 +25,7 @@ import CategoryBadge from '../../components/common/CategoryBadge';
 import ImageModal from '../../components/common/ImageModal';
 import EmptyState from '../../components/common/EmptyState';
 import IssuePhoto from '../../components/common/IssuePhoto';
+import IssueCard from '../../components/issues/IssueCard';
 import { getIssues, getIssueCount, getStaffMembers, assignIssue } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
 
@@ -61,7 +62,10 @@ export default function AdminDashboardPage() {
         resolved,
         unassigned,
       ] = await Promise.all([
-        getIssues({ limit: 6 }),
+        getIssues({
+          status: 'reported,assigned,in_progress',
+          limit: 6,
+        }),
         getStaffMembers().catch(() => ({ data: [] })),
         getIssueCount(),
         getIssueCount({ status: 'reported' }),
@@ -292,97 +296,14 @@ export default function AdminDashboardPage() {
           /* Cards Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
             {issues.map((issue) => (
-              <div
+              <IssueCard
                 key={issue._id}
+                issue={issue}
                 onClick={() => navigate(`/admin/issues/${issue._id}`)}
-                className="group relative purple-card rounded-2xl overflow-hidden flex flex-col cursor-pointer"
-              >
-                {/* Image Banner with SVG Placeholder fallback */}
-                <div className="relative h-40 w-full overflow-hidden border-b border-purple-200">
-                  <IssuePhoto
-                    src={issue.photo}
-                    alt={issue.title}
-                    category={issue.category}
-                    variant="banner"
-                    className="h-40"
-                  />
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-purple-950 font-mono text-xs font-black px-2.5 py-1 rounded-lg border border-purple-200 shadow-xs">
-                    {issue.ticketId}
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <PriorityBadge priority={issue.priority} size="sm" />
-                  </div>
-                  {issue.photo && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActivePhoto({
-                          isOpen: true,
-                          src: issue.photo,
-                          title: `${issue.ticketId} - ${issue.title}`,
-                        });
-                      }}
-                      className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 backdrop-blur-md text-white transition-all opacity-0 group-hover:opacity-100 border border-white/20"
-                      title="Inspect Photo"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-purple-950 group-hover:text-purple-700 transition-colors line-clamp-1 text-sm sm:text-base">
-                      {issue.title}
-                    </h3>
-                    <p className="text-xs text-purple-900/70 line-clamp-2 mt-1 font-medium">
-                      {issue.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-purple-100 text-xs text-purple-900/70">
-                    <div className="flex items-center gap-1.5 text-purple-950 font-semibold truncate">
-                      <MapPin className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
-                      <span className="truncate">{issue.location}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <CategoryBadge category={issue.category} size="sm" />
-                      <div className="flex items-center gap-1 text-[11px] text-purple-700 font-semibold">
-                        <Calendar className="w-3 h-3" />
-                        <span>
-                          {new Date(issue.createdAt).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assignee / Quick dispatch bar */}
-                  <div
-                    className="pt-2.5 border-t border-purple-100 flex items-center justify-between gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <StatusBadge status={issue.status} size="sm" />
-
-                    <select
-                      value={issue.assignedTo?._id || ''}
-                      onChange={(e) => handleQuickAssign(issue._id, e.target.value)}
-                      disabled={assigningId === issue._id}
-                      className="text-xs py-1 px-2 rounded-lg border border-purple-200 bg-white font-bold text-purple-900 outline-none focus:border-purple-600 max-w-[140px] truncate"
-                    >
-                      <option value="">+ Assign Staff</option>
-                      {staffMembers.map((staff) => (
-                        <option key={staff._id} value={staff._id}>
-                          {staff.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
+                onPhotoClick={(src, title) =>
+                  setActivePhoto({ isOpen: true, src, title })
+                }
+              />
             ))}
           </div>
         ) : (

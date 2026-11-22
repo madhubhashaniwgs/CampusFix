@@ -62,6 +62,7 @@ export default function AppLayout({ children, activeNav }) {
       { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/admin/issues', label: 'All Issues', icon: ClipboardList },
       { to: '/admin/staff', label: 'Staff Team', icon: Users },
+      { to: '/admin/users', label: 'User Management', icon: UserRound },
     ],
   };
 

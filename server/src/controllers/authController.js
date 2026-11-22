@@ -15,9 +15,11 @@ class AuthController {
     try {
       const result = await authService.register(req.body);
 
-      // The JWT is delivered only via an httpOnly cookie and is
-      // intentionally absent from the response body.
-      setAuthCookie(res, result.token);
+      // Only active accounts receive a session cookie. Pending
+      // staff registrations must wait for admin approval.
+      if (result.user.status === 'active') {
+        setAuthCookie(res, result.token);
+      }
 
       res.status(201).json(
         new ApiResponse(201, 'Registration successful', {

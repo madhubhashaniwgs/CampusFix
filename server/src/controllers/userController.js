@@ -13,6 +13,44 @@ class UserController {
       next(error);
     }
   };
+
+  listUsers = async (req, res, next) => {
+    try {
+      const { role, status } = req.query;
+
+      const users = await userService.listUsers({ role, status });
+
+      res.status(200).json(
+        new ApiResponse(200, 'Users retrieved successfully', users)
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  approveStaff = async (req, res, next) => {
+    try {
+      const user = await userService.approveStaff(req.params.id);
+
+      res.status(200).json(
+        new ApiResponse(200, 'Staff member approved', user)
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  rejectStaff = async (req, res, next) => {
+    try {
+      const user = await userService.rejectStaff(req.params.id);
+
+      res.status(200).json(
+        new ApiResponse(200, 'Staff registration rejected', user)
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export default new UserController();

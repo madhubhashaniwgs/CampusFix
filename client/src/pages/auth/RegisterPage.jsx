@@ -12,6 +12,10 @@ import {
   TicketCheck,
   Users,
   BarChart3,
+  GraduationCap,
+  Briefcase,
+  IdCard,
+  Building2,
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -20,8 +24,12 @@ export default function RegisterPage() {
   const { success, error: toastError } = useToast();
 
   const [formData, setFormData] = useState({
+    role: 'student',
     fullName: '',
     email: '',
+    studentId: '',
+    staffId: '',
+    department: '',
     password: '',
     confirmPassword: '',
   });
@@ -64,11 +72,37 @@ export default function RegisterPage() {
       return;
     }
 
+    if (formData.role === 'student' && !formData.studentId.trim()) {
+      const msg = 'Student ID / registration number is required.';
+      setError(msg);
+      toastError(msg);
+      return;
+    }
+
+    if (formData.role === 'staff') {
+      if (!formData.staffId.trim() || !formData.department.trim()) {
+        const msg = 'Staff ID and department are required.';
+        setError(msg);
+        toastError(msg);
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
       const { confirmPassword, ...userData } = formData;
       const response = await register(userData);
+
+      if (formData.role === 'staff') {
+        success(
+          'Registration received! Your staff account is pending admin approval.',
+          'Awaiting Approval'
+        );
+        navigate('/login', { replace: true });
+        return;
+      }
+
       success(`Welcome to CampusFix, ${response.data.user.fullName}!`, 'Account Created');
       navigate('/student/dashboard', { replace: true });
     } catch (err) {
@@ -121,13 +155,52 @@ export default function RegisterPage() {
         <div className="auth-form-panel bg-purple-50/70">
           <div className="auth-card">
             <div className="auth-heading">
-              <h1 className="text-purple-950 font-black">Create Student Account</h1>
-              <p className="text-purple-800 font-medium">Sign up to log tickets and track campus repairs.</p>
+              <h1 className="text-purple-950 font-black">Create Account</h1>
+              <p className="text-purple-800 font-medium">
+                {formData.role === 'student'
+                  ? 'Sign up as a student to log tickets and track campus repairs.'
+                  : 'Sign up as staff — your account requires admin approval.'}
+              </p>
             </div>
 
             {error && <div className="error-message">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="text-purple-950 font-bold">I am a</label>
+                <div className="role-toggle">
+                  <button
+                    type="button"
+                    className={`role-toggle-btn ${formData.role === 'student' ? 'active' : ''}`}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        role: 'student',
+                        staffId: '',
+                        department: '',
+                      }))
+                    }
+                  >
+                    <GraduationCap size={17} />
+                    Student
+                  </button>
+                  <button
+                    type="button"
+                    className={`role-toggle-btn ${formData.role === 'staff' ? 'active' : ''}`}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        role: 'staff',
+                        studentId: '',
+                      }))
+                    }
+                  >
+                    <Briefcase size={17} />
+                    Staff
+                  </button>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label htmlFor="fullName" className="text-purple-950 font-bold">Full name</label>
                 <div className="input-wrapper border-purple-200 bg-white">
@@ -161,6 +234,69 @@ export default function RegisterPage() {
                   />
                 </div>
               </div>
+
+              {formData.role === 'student' && (
+                <div className="form-group">
+                  <label htmlFor="studentId" className="text-purple-950 font-bold">
+                    Student ID / Registration No.
+                  </label>
+                  <div className="input-wrapper border-purple-200 bg-white">
+                    <IdCard size={18} className="text-purple-500" />
+                    <input
+                      id="studentId"
+                      type="text"
+                      name="studentId"
+                      autoComplete="off"
+                      placeholder="e.g. 2023CS012"
+                      value={formData.studentId}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.role === 'staff' && (
+                <>
+                  <div className="form-group">
+                    <label htmlFor="staffId" className="text-purple-950 font-bold">
+                      Staff ID
+                    </label>
+                    <div className="input-wrapper border-purple-200 bg-white">
+                      <IdCard size={18} className="text-purple-500" />
+                      <input
+                        id="staffId"
+                        type="text"
+                        name="staffId"
+                        autoComplete="off"
+                        placeholder="e.g. STF-1042"
+                        value={formData.staffId}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="department" className="text-purple-950 font-bold">
+                      Department
+                    </label>
+                    <div className="input-wrapper border-purple-200 bg-white">
+                      <Building2 size={18} className="text-purple-500" />
+                      <input
+                        id="department"
+                        type="text"
+                        name="department"
+                        autoComplete="off"
+                        placeholder="e.g. Faculty of IT"
+                        value={formData.department}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="form-group">
                 <label htmlFor="password" className="text-purple-950 font-bold">Password</label>

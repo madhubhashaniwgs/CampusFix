@@ -66,7 +66,26 @@ const validateUserFields = ({ fullName, email, password }) => {
 };
 
 export const validateRegister = (req, res, next) => {
+  const { role, studentId, staffId, department } = req.body;
   const errors = validateUserFields(req.body);
+
+  // Public registration only allows student or staff self-signup.
+  if (role !== undefined && !['student', 'staff'].includes(role)) {
+    errors.push('Role must be student or staff');
+  }
+
+  if (role === 'student' && (!studentId || !String(studentId).trim())) {
+    errors.push('Student ID / registration number is required');
+  }
+
+  if (role === 'staff') {
+    if (!staffId || !String(staffId).trim()) {
+      errors.push('Staff ID is required');
+    }
+    if (!department || !String(department).trim()) {
+      errors.push('Department is required');
+    }
+  }
 
   if (errors.length > 0) {
     return next(new ApiError(400, 'Validation failed', errors));

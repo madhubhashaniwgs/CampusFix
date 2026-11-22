@@ -11,7 +11,6 @@ import {
   TicketCheck,
   Users,
   BarChart3,
-  Sparkles,
 } from 'lucide-react';
 
 const getDashboardPath = (role) => {
@@ -60,11 +59,6 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const fillCredentials = (email, password) => {
-    setFormData({ email, password });
-    setError('');
   };
 
   return (
@@ -166,41 +160,10 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Quick Demo Helper Section */}
-            <div className="mt-6 pt-5 border-t border-purple-200">
-              <span className="text-[11px] font-black uppercase tracking-wider text-purple-900 block mb-2 flex items-center gap-1">
-                <Sparkles size={13} className="text-purple-700" />
-                Quick demo credentials
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('student@campus.edu', 'Student123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('staff@campus.edu', 'Staff123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('admin@campus.edu', 'Admin123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-
             <div className="auth-footer text-purple-900/80">
               <span>Don't have an account? </span>
               <Link to="/register" className="text-purple-700 font-bold hover:underline">
-                Create student account
+                Create an account
               </Link>
             </div>
           </div>
