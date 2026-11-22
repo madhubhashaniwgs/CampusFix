@@ -788,3 +788,193 @@ describe('Staff self-registration approval', () => {
     assert.equal(approve.status, 403);
   });
 });
+
+describe('Staff approval edge cases', () => {
+  const registerPendingStaff = async (email) => {
+    const reg = await api('POST', '/api/auth/register', {
+      body: {
+        role: 'staff',
+        fullName: 'Edge Staff',
+        email,
+        staffId: `STF-${Date.now()}`,
+        department: 'Operations',
+        password: VALID_PASSWORD,
+      },
+    });
+    assert.equal(reg.status, 201);
+    return reg;
+  };
+
+  const findPendingStaff = async (email) => {
+    const list = await api('GET', '/api/admin/users?role=staff&status=pending');
+    return list.body.data.users.find((u) => u.email === email);
+  };
+
+  test('approve response contains no sensitive fields', async () => {
+    await registerPendingStaff('edge_approve_safe@test.com');
+    await createUserDirect({ email: 'admin_edge1@test.com', role: 'admin' });
+    await loginAs('admin_edge1@test.com');
+
+    const target = await findPendingStaff('edge_approve_safe@test.com');
+    const res = await api('PATCH', `/api/admin/staff/${target.id}/approve`);
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.status, 'active');
+    assert.equal(res.body.data.password, undefined);
+    assert.equal(res.body.data.passwordHash, undefined);
+    assert.equal(res.body.data.tokenVersion, undefined);
+  });
+
+  test('approving an already-active staff is a safe no-op', async () => {
+    await registerPendingStaff('edge_noop@test.com');
+    await createUserDirect({ email: 'admin_edge2@test.com', role: 'admin' });
+    await loginAs('admin_edge2@test.com');
+
+    const target = await findPendingStaff('edge_noop@test.com');
+    await api('PATCH', `/api/admin/staff/${target.id}/approve`);
+    const again = await api('PATCH', `/api/admin/staff/${target.id}/approve`);
+
+    assert.equal(again.status, 200);
+    assert.equal(again.body.data.status, 'active');
+  });
+
+  test('approving a rejected staff account is rejected', async () => {
+    await registerPendingStaff('edge_reapprove@test.com');
+    await createUserDirect({ email: 'admin_edge3@test.com', role: 'admin' });
+    await loginAs('admin_edge3@test.com');
+
+    const target = await findPendingStaff('edge_reapprove@test.com');
+    await api('PATCH', `/api/admin/staff/${target.id}/reject`);
+
+    const res = await api('PATCH', `/api/admin/staff/${target.id}/approve`);
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /rejected/i);
+
+    // Still cannot log in
+    const login = await api('POST', '/api/auth/login', {
+      body: { email: 'edge_reapprove@test.com', password: VALID_PASSWORD },
+    });
+    assert.equal(login.status, 403);
+  });
+
+  test('rejecting an already-rejected staff is a safe no-op', async () => {
+    await registerPendingStaff('edge_rnoop@test.com');
+    await createUserDirect({ email: 'admin_edge4@test.com', role: 'admin' });
+    await loginAs('admin_edge4@test.com');
+
+    const target = await findPendingStaff('edge_rnoop@test.com');
+    await api('PATCH', `/api/admin/staff/${target.id}/reject`);
+    const again = await api('PATCH', `/api/admin/staff/${target.id}/reject`);
+
+    assert.equal(again.status, 200);
+    assert.equal(again.body.data.status, 'rejected');
+  });
+
+  test('rejecting an active staff revokes access', async () => {
+    await createUserDirect({
+      email: 'edge_active_staff@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    await createUserDirect({ email: 'admin_edge5@test.com', role: 'admin' });
+    await loginAs('admin_edge5@test.com');
+
+    const list = await api('GET', '/api/admin/users?role=staff&status=active');
+    const target = list.body.data.users.find(
+      (u) => u.email === 'edge_active_staff@test.com'
+    );
+    assert.ok(target);
+
+    const res = await api('PATCH', `/api/admin/staff/${target.id}/reject`);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.status, 'rejected');
+
+    const login = await api('POST', '/api/auth/login', {
+      body: { email: 'edge_active_staff@test.com', password: VALID_PASSWORD },
+    });
+    assert.equal(login.status, 403);
+    assert.match(login.body.message, /rejected/i);
+  });
+
+  test('nonexistent and invalid staff IDs return proper errors', async () => {
+    await createUserDirect({ email: 'admin_edge6@test.com', role: 'admin' });
+    await loginAs('admin_edge6@test.com');
+
+    const missing = await api(
+      'PATCH',
+      '/api/admin/staff/000000000000000000000000/approve'
+    );
+    assert.equal(missing.status, 404);
+
+    const invalid = await api('PATCH', '/api/admin/staff/not-an-id/approve');
+    assert.equal(invalid.status, 400);
+    assert.match(invalid.body.message, /invalid/i);
+
+    const invalidReject = await api(
+      'PATCH',
+      '/api/admin/staff/not-an-id/reject'
+    );
+    assert.equal(invalidReject.status, 400);
+  });
+
+  test('cannot approve/reject a non-staff user', async () => {
+    await createUserDirect({ email: 'edge_student@test.com', role: 'student' });
+    await createUserDirect({ email: 'admin_edge7@test.com', role: 'admin' });
+    await loginAs('admin_edge7@test.com');
+
+    const list = await api('GET', '/api/admin/users?role=student');
+    const target = list.body.data.users.find(
+      (u) => u.email === 'edge_student@test.com'
+    );
+
+    const approve = await api('PATCH', `/api/admin/staff/${target.id}/approve`);
+    assert.equal(approve.status, 400);
+    assert.match(approve.body.message, /not a staff/i);
+
+    const reject = await api('PATCH', `/api/admin/staff/${target.id}/reject`);
+    assert.equal(reject.status, 400);
+  });
+
+  test('unauthenticated, student, and staff cannot approve/reject', async () => {
+    await createUserDirect({ email: 'edge_unauth_admin@test.com', role: 'admin' });
+    await loginAs('edge_unauth_admin@test.com');
+
+    const list = await api('GET', '/api/admin/users?role=staff');
+    const anyStaff = list.body.data.users[0];
+    assert.ok(anyStaff, 'expected at least one staff user');
+
+    const id = anyStaff.id;
+
+    // Unauthenticated: valid CSRF token but no auth cookie.
+    const csrf = jar.csrf_token;
+    const unauth = await fetch(`${baseUrl}/api/admin/staff/${id}/approve`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `csrf_token=${csrf}`,
+        'X-CSRF-Token': csrf,
+      },
+    });
+    assert.equal(unauth.status, 401);
+
+    // Student
+    await createUserDirect({ email: 'edge_role_student@test.com', role: 'student' });
+    await loginAs('edge_role_student@test.com');
+    const stu = await api('PATCH', `/api/admin/staff/${id}/approve`);
+    assert.equal(stu.status, 403);
+    const stuRej = await api('PATCH', `/api/admin/staff/${id}/reject`);
+    assert.equal(stuRej.status, 403);
+
+    // Staff
+    await createUserDirect({
+      email: 'edge_role_staff@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    await loginAs('edge_role_staff@test.com');
+    const stf = await api('PATCH', `/api/admin/staff/${id}/approve`);
+    assert.equal(stf.status, 403);
+    const stfRej = await api('PATCH', `/api/admin/staff/${id}/reject`);
+    assert.equal(stfRej.status, 403);
+  });
+});

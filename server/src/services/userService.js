@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
 import userRepository from '../repositories/userRepository.js';
 import ApiError from '../utils/ApiError.js';
@@ -76,6 +77,10 @@ class UserService {
   }
 
   async approveStaff(userId) {
+    if (!mongoose.isValidObjectId(userId)) {
+      throw new ApiError(400, 'Invalid staff member ID');
+    }
+
     const user = await userRepository.findStaffById(userId);
 
     if (!user) {
@@ -84,6 +89,22 @@ class UserService {
 
     if (user.role !== 'staff') {
       throw new ApiError(400, 'User is not a staff member');
+    }
+
+    // A rejected registration must not be silently reactivated;
+    // approving an already-active account is a safe no-op.
+    if (user.status === 'rejected') {
+      throw new ApiError(400, 'Cannot approve a rejected staff account');
+    }
+
+    if (user.status === 'active') {
+      return {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      };
     }
 
     const updated = await userRepository.setUserStatus(userId, 'active');
@@ -98,6 +119,10 @@ class UserService {
   }
 
   async rejectStaff(userId) {
+    if (!mongoose.isValidObjectId(userId)) {
+      throw new ApiError(400, 'Invalid staff member ID');
+    }
+
     const user = await userRepository.findStaffById(userId);
 
     if (!user) {
@@ -106,6 +131,18 @@ class UserService {
 
     if (user.role !== 'staff') {
       throw new ApiError(400, 'User is not a staff member');
+    }
+
+    // Rejecting an already-rejected account is a safe no-op;
+    // rejecting an active staff account revokes their access.
+    if (user.status === 'rejected') {
+      return {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      };
     }
 
     const updated = await userRepository.setUserStatus(userId, 'rejected');
