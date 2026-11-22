@@ -29,6 +29,8 @@ router.post(
 
 router.get('/me', authenticate, authController.getMe);
 
+router.get('/csrf', authController.getCsrfToken);
+
 router.post('/logout', authenticate, authController.logout);
 
 export default router;

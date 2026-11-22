@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/authRoutes.js';
+import csrfProtection from './middleware/csrfMiddleware.js';
 import notFoundMiddleware from './middleware/notFoundMiddleware.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 import ApiResponse from './utils/ApiResponse.js';
@@ -25,10 +27,12 @@ app.use(helmet());
 app.use(
   cors(
     isProduction
-      ? { origin: allowedOrigins }
-      : {}
+      ? { origin: allowedOrigins, credentials: true }
+      : { credentials: true }
   )
 );
+app.use(cookieParser());
+app.use(csrfProtection);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

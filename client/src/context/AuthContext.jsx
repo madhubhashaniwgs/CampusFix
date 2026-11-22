@@ -16,25 +16,17 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(
-    () => localStorage.getItem('campusfix_token')
-  );
   const [loading, setLoading] = useState(true);
 
-  // Restore the logged-in user after a page refresh.
+  // Restore the logged-in user after a page refresh. The auth
+  // token lives in an httpOnly cookie, so we simply ask the
+  // backend who the current user is.
   useEffect(() => {
     const restoreSession = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const response = await getCurrentUser(token);
+        const response = await getCurrentUser();
         setUser(response.data);
       } catch (error) {
-        localStorage.removeItem('campusfix_token');
-        setToken(null);
         setUser(null);
       } finally {
         setLoading(false);
@@ -42,18 +34,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     restoreSession();
-  }, [token]);
-
-  const saveSession = (result) => {
-    localStorage.setItem('campusfix_token', result.token);
-    setToken(result.token);
-    setUser(result.user);
-  };
+  }, []);
 
   const register = async (userData) => {
     const response = await registerUser(userData);
 
-    saveSession(response.data);
+    setUser(response.data.user);
 
     return response;
   };
@@ -61,32 +47,27 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const response = await loginUser(credentials);
 
-    saveSession(response.data);
+    setUser(response.data.user);
 
     return response;
   };
 
- const logout = async () => {
-  try {
-    if (token) {
-      await logoutUser(token);
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      setUser(null);
     }
-  } catch (error) {
-    console.error('Logout API error:', error);
-  } finally {
-    localStorage.removeItem('campusfix_token');
-    setToken(null);
-    setUser(null);
-  }
-};
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         loading,
-        isAuthenticated: Boolean(user && token),
+        isAuthenticated: Boolean(user),
         register,
         login,
         logout,

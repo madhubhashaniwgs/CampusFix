@@ -25,7 +25,7 @@ class AuthService {
       role: 'student',
     });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion ?? 0);
 
     return {
       user: {
@@ -60,7 +60,7 @@ class AuthService {
       throw new ApiError(401, 'Invalid email or password');
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion ?? 0);
 
     return {
       user: {
@@ -86,6 +86,12 @@ class AuthService {
       email: user.email,
       role: user.role,
     };
+  }
+
+  // Increments the user's tokenVersion, which invalidates every
+  // JWT issued before this point (i.e. all sessions for the user).
+  async logout(userId) {
+    await userRepository.incrementTokenVersion(userId);
   }
 }
 

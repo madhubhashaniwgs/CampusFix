@@ -28,6 +28,14 @@ class UserRepository {
       isActive: true,
     }).select('fullName email');
   }
+
+  async incrementTokenVersion(userId) {
+    return User.findByIdAndUpdate(
+      userId,
+      { $inc: { tokenVersion: 1 } },
+      { new: true }
+    );
+  }
 }
 
 export default new UserRepository();
