@@ -1,6 +1,6 @@
 import ApiError from '../utils/ApiError.js';
 
-const validCategories = [
+export const validCategories = [
   'electrical',
   'plumbing',
   'it',
@@ -8,7 +8,7 @@ const validCategories = [
   'other',
 ];
 
-const validPriorities = [
+export const validPriorities = [
   'low',
   'medium',
   'high',
@@ -21,6 +21,17 @@ const validStatuses = [
   'resolved',
   'rejected',
 ];
+
+export const filterableStatuses = [
+  'reported',
+  'assigned',
+  'in_progress',
+  'resolved',
+  'rejected',
+];
+
+const MAX_SEARCH_LENGTH = 100;
+const MAX_LIMIT = 100;
 
 export const validateCreateIssue = (req, res, next) => {
   const { title, description, category, location, priority } = req.body;
@@ -81,6 +92,120 @@ export const validateUpdateStatus = (req, res, next) => {
   next();
 };
 
+
+export const validateIssueListQuery = (req, res, next) => {
+  const {
+    page,
+    limit,
+    status,
+    priority,
+    category,
+    assignee,
+    dateFrom,
+    dateTo,
+    search,
+  } = req.query;
+
+  const errors = [];
+  const listQuery = {};
+
+  if (page !== undefined) {
+    const parsed = Number(page);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      errors.push('Page must be a positive integer');
+    } else {
+      listQuery.page = parsed;
+    }
+  }
+
+  if (limit !== undefined) {
+    const parsed = Number(limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_LIMIT) {
+      errors.push(`Limit must be an integer between 1 and ${MAX_LIMIT}`);
+    } else {
+      listQuery.limit = parsed;
+    }
+  }
+
+  if (status !== undefined) {
+    const statuses = String(status).split(',').map((s) => s.trim());
+    const invalid = statuses.filter((s) => !filterableStatuses.includes(s));
+    if (statuses.length === 0 || invalid.length > 0) {
+      errors.push('Please provide valid issue statuses');
+    } else {
+      listQuery.status = statuses;
+    }
+  }
+
+  if (priority !== undefined) {
+    if (!validPriorities.includes(priority)) {
+      errors.push('Please provide a valid priority');
+    } else {
+      listQuery.priority = priority;
+    }
+  }
+
+  if (category !== undefined) {
+    if (!validCategories.includes(category)) {
+      errors.push('Please provide a valid category');
+    } else {
+      listQuery.category = category;
+    }
+  }
+
+  if (assignee !== undefined) {
+    if (assignee !== 'unassigned') {
+      errors.push('Assignee filter must be "unassigned"');
+    } else {
+      listQuery.assignee = assignee;
+    }
+  }
+
+  if (dateFrom !== undefined) {
+    if (Number.isNaN(Date.parse(dateFrom))) {
+      errors.push('dateFrom must be a valid date');
+    } else {
+      listQuery.dateFrom = dateFrom;
+    }
+  }
+
+  if (dateTo !== undefined) {
+    if (Number.isNaN(Date.parse(dateTo))) {
+      errors.push('dateTo must be a valid date');
+    } else {
+      listQuery.dateTo = dateTo;
+    }
+  }
+
+  if (
+    listQuery.dateFrom &&
+    listQuery.dateTo &&
+    new Date(listQuery.dateFrom) > new Date(listQuery.dateTo)
+  ) {
+    errors.push('dateFrom must be before or equal to dateTo');
+  }
+
+  if (search !== undefined) {
+    if (
+      typeof search !== 'string' ||
+      search.trim().length > MAX_SEARCH_LENGTH
+    ) {
+      errors.push(
+        `Search must be a string of at most ${MAX_SEARCH_LENGTH} characters`
+      );
+    } else {
+      listQuery.search = search.trim();
+    }
+  }
+
+  if (errors.length > 0) {
+    return next(new ApiError(400, 'Validation failed', errors));
+  }
+
+  req.issueListQuery = listQuery;
+
+  next();
+};
 
 export const validateAssignIssue = (req, res, next) => {
   const { staffId } = req.body;

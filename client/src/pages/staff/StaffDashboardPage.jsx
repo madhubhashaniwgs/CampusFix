@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
-import { getIssues } from '../../services/issueService';
+import { getIssues, getIssueCount } from '../../services/issueService';
 
 import './StaffDashboardPage.css';
 
@@ -21,6 +21,12 @@ function StaffDashboardPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
+  const [totalAssigned, setTotalAssigned] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({
+    assigned: 0,
+    in_progress: 0,
+    resolved: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,8 +35,21 @@ function StaffDashboardPage() {
       setLoading(true);
       setError('');
 
-      const response = await getIssues();
+      const [response, assigned, inProgress, resolved] =
+        await Promise.all([
+          getIssues({ limit: 5 }),
+          getIssueCount({ status: 'assigned' }),
+          getIssueCount({ status: 'in_progress' }),
+          getIssueCount({ status: 'resolved' }),
+        ]);
+
       setIssues(response.data || []);
+      setTotalAssigned(response.pagination?.totalItems || 0);
+      setStatusCounts({
+        assigned,
+        in_progress: inProgress,
+        resolved,
+      });
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -50,26 +69,13 @@ function StaffDashboardPage() {
     navigate('/login', { replace: true });
   };
 
-  const totalAssigned = issues.length;
+  const pendingIssues = statusCounts.assigned;
 
-  const pendingIssues = issues.filter(
-    (issue) => issue.status === 'assigned'
-  ).length;
+  const inProgressIssues = statusCounts.in_progress;
 
-  const inProgressIssues = issues.filter(
-    (issue) => issue.status === 'in_progress'
-  ).length;
+  const resolvedIssues = statusCounts.resolved;
 
-  const resolvedIssues = issues.filter(
-    (issue) => issue.status === 'resolved'
-  ).length;
-
-  const recentIssues = [...issues]
-    .sort(
-      (a, b) =>
-        new Date(b.updatedAt) - new Date(a.updatedAt)
-    )
-    .slice(0, 5);
+  const recentIssues = issues;
 
   const formatStatus = (status) => {
     return status

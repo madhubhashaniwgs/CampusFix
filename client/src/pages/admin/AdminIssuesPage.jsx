@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -8,85 +8,134 @@ import {
   AlertCircle,
   UserCheck,
   LayoutDashboard,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 import {
   getIssues,
+  getIssueCount,
   getStaffMembers,
   assignIssue,
 } from '../../services/issueService';
 
 import './AdminIssuesPage.css';
 
+const PAGE_SIZE = 10;
+
 function AdminIssuesPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    pageSize: PAGE_SIZE,
+  });
+  const [counts, setCounts] = useState({ total: 0, reported: 0, awaiting: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [selectedStaff, setSelectedStaff] = useState({});
   const [assigningId, setAssigningId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
+  const buildParams = useCallback(
+    (targetPage = page) => {
+      const params = { page: targetPage, limit: PAGE_SIZE };
 
-      const [issuesResponse, staffResponse] = await Promise.all([
-        getIssues(),
-        getStaffMembers(),
-      ]);
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (priorityFilter !== 'all') params.priority = priorityFilter;
+      if (categoryFilter !== 'all') params.category = categoryFilter;
 
-      setIssues(issuesResponse.data || []);
-      setStaffMembers(staffResponse.data || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Failed to load issues. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+      return params;
+    },
+    [page, debouncedSearch, statusFilter, priorityFilter, categoryFilter]
+  );
 
-  useEffect(() => {
-    fetchData();
+  const fetchCounts = useCallback(async () => {
+    const [total, reported, awaiting] = await Promise.all([
+      getIssueCount(),
+      getIssueCount({ status: 'reported' }),
+      getIssueCount({
+        assignee: 'unassigned',
+        status: 'reported,assigned,in_progress',
+      }),
+    ]);
+
+    setCounts({ total, reported, awaiting });
   }, []);
 
+  const fetchIssues = useCallback(
+    async (targetPage = page) => {
+      try {
+        setLoading(true);
+        setError('');
 
-const filteredIssues = useMemo(() => {
-  const search = searchTerm.trim().toLowerCase();
+        const response = await getIssues(buildParams(targetPage));
 
-  return issues.filter((issue) => {
-    const searchableFields = [
-      issue.ticketId,
-      issue.title,
-      issue.location,
-      issue.category,
-      issue.assignedTo?.fullName,
-      issue.reportedBy?.fullName,
-    ];
+        setIssues(response.data || []);
+        setPagination(
+          response.pagination || {
+            currentPage: targetPage,
+            totalPages: 1,
+            totalItems: 0,
+            pageSize: PAGE_SIZE,
+          }
+        );
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+          'Failed to load issues. Please try again.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [buildParams, page]
+  );
 
-    const matchesSearch = searchableFields.some((field) =>
-      field?.toLowerCase().includes(search)
-    );
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchCounts(), fetchIssues(page)]);
+  }, [fetchCounts, fetchIssues, page]);
 
-    const matchesStatus =
-      statusFilter === 'all' ||
-      issue.status === statusFilter;
+  useEffect(() => {
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    const matchesPriority =
-      priorityFilter === 'all' ||
-      issue.priority === priorityFilter;
+  useEffect(() => {
+    getStaffMembers()
+      .then((response) => setStaffMembers(response.data || []))
+      .catch(() => setStaffMembers([]));
+  }, []);
 
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
-}, [issues, searchTerm, statusFilter, priorityFilter]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchIssues(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, priorityFilter, categoryFilter]);
+
+  const handleFilterChange = (setter) => (event) => {
+    setter(event.target.value);
+    setPage(1);
+  };
 
   const handleAssign = async (issueId) => {
     const staffId = selectedStaff[issueId];
@@ -105,7 +154,7 @@ const filteredIssues = useMemo(() => {
 
       setSuccessMessage('Issue assigned successfully.');
 
-      await fetchData();
+      await refreshAll();
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -121,7 +170,7 @@ const filteredIssues = useMemo(() => {
     ? status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
     : 'Unknown';
 
-  
+
     const formatDate = (date) => {
         if (!date) return 'N/A';
 
@@ -141,7 +190,7 @@ const filteredIssues = useMemo(() => {
 
   return (
     <div className="admin-issues-page">
-      
+
         <header className="admin-issues-header">
         <div>
             <h1>Issue Management</h1>
@@ -159,7 +208,7 @@ const filteredIssues = useMemo(() => {
 
             <button
             className="admin-issues-refresh"
-            onClick={fetchData}
+            onClick={refreshAll}
             disabled={loading}
             >
             <RefreshCw size={17} />
@@ -173,33 +222,23 @@ const filteredIssues = useMemo(() => {
         <div>
           <ClipboardList size={22} />
           <span>Total Issues</span>
-          <strong>{loading ? '--' : issues.length}</strong>
+          <strong>{loading ? '--' : counts.total}</strong>
         </div>
 
         <div>
           <AlertCircle size={22} />
           <span>Unassigned</span>
           <strong>
-            {loading
-              ? '--'
-              : issues.filter(
-                  (issue) => issue.status === 'reported'
-                ).length}
+            {loading ? '--' : counts.reported}
           </strong>
         </div>
 
         <div>
           <UserCheck size={22} />
           <span>Assigned</span>
-          
+
             <strong>
-            {loading
-                ? '--'
-                : issues.filter(
-                    (issue) =>
-                    !issue.assignedTo &&
-                    !['resolved', 'rejected'].includes(issue.status)
-                ).length}
+            {loading ? '--' : counts.awaiting}
             </strong>
 
         </div>
@@ -231,7 +270,7 @@ const filteredIssues = useMemo(() => {
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={handleFilterChange(setStatusFilter)}
         >
           <option value="all">All Statuses</option>
           <option value="reported">Reported</option>
@@ -243,7 +282,7 @@ const filteredIssues = useMemo(() => {
 
         <select
           value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
+          onChange={handleFilterChange(setPriorityFilter)}
         >
           <option value="all">All Priorities</option>
           <option value="low">Low</option>
@@ -251,19 +290,31 @@ const filteredIssues = useMemo(() => {
           <option value="high">High</option>
           <option value="urgent">Urgent</option>
         </select>
+
+        <select
+          value={categoryFilter}
+          onChange={handleFilterChange(setCategoryFilter)}
+        >
+          <option value="all">All Categories</option>
+          <option value="electrical">Electrical</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="it">IT</option>
+          <option value="furniture">Furniture</option>
+          <option value="other">Other</option>
+        </select>
       </section>
 
       <section className="admin-issues-list">
         <div className="admin-issues-list-heading">
           <h2>All Campus Issues</h2>
-          <span>{filteredIssues.length} issue(s) found</span>
+          <span>{pagination.totalItems} issue(s) found</span>
         </div>
 
         {loading ? (
           <div className="admin-issues-empty">
             Loading issues...
           </div>
-        ) : filteredIssues.length === 0 ? (
+        ) : issues.length === 0 ? (
           <div className="admin-issues-empty">
             <ClipboardList size={35} />
             <h3>No issues found</h3>
@@ -286,7 +337,7 @@ const filteredIssues = useMemo(() => {
               </thead>
 
               <tbody>
-                {filteredIssues.map((issue) => (
+                {issues.map((issue) => (
                   <tr key={issue._id}>
                     <td className="admin-issues-ticket">
                       {issue.ticketId}
@@ -379,6 +430,36 @@ const filteredIssues = useMemo(() => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && pagination.totalPages > 1 && (
+          <div className="admin-issues-pagination">
+            <button
+              className="pagination-button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={pagination.currentPage <= 1}
+            >
+              <ChevronLeft size={16} />
+              Previous
+            </button>
+
+            <span className="pagination-info">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+
+            <button
+              className="pagination-button"
+              onClick={() =>
+                setPage((p) =>
+                  Math.min(pagination.totalPages, p + 1)
+                )
+              }
+              disabled={pagination.currentPage >= pagination.totalPages}
+            >
+              Next
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </section>

@@ -437,3 +437,63 @@
     cursor: pointer;
   }
 }
+
+.my-issues-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  background: white;
+  color: #8b5cf6;
+}
+
+.my-issues-search input {
+  flex: 1;
+  padding: 11px 0;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 14px;
+  outline: none;
+}
+
+.my-issues-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.my-issues-pagination .pagination-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid #ddd6fe;
+  border-radius: 9px;
+  background: white;
+  color: #6d28d9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-issues-pagination .pagination-button:hover:not(:disabled) {
+  background: #ede9fe;
+}
+
+.my-issues-pagination .pagination-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.my-issues-pagination .pagination-info {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}

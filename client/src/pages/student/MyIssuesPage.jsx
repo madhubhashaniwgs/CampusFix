@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -8,10 +8,15 @@ import {
   RefreshCw,
   MapPin,
   CalendarDays,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-import { getIssues } from '../../services/issueService';
+import { getIssues, getIssueCount } from '../../services/issueService';
 import './MyIssuesPage.css';
+
+const PAGE_SIZE = 10;
 
 const statusLabels = {
   reported: 'Reported',
@@ -28,6 +33,15 @@ const priorityLabels = {
   urgent: 'Urgent',
 };
 
+const statusTabs = [
+  ['all', 'All'],
+  ['reported', 'Reported'],
+  ['assigned', 'Assigned'],
+  ['in_progress', 'In Progress'],
+  ['resolved', 'Resolved'],
+  ['rejected', 'Rejected'],
+];
+
 function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -40,43 +54,103 @@ function MyIssuesPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    pageSize: PAGE_SIZE,
+  });
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    reported: 0,
+    assigned: 0,
+    in_progress: 0,
+    resolved: 0,
+    rejected: 0,
+  });
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchIssues = async () => {
-    try {
-      setLoading(true);
-      setError('');
+  const fetchCounts = useCallback(async () => {
+    const statuses = statusTabs.map(([value]) => value);
 
-      const response = await getIssues();
-      setIssues(response.data || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Unable to load your issues. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const counts = await Promise.all(
+      statuses.map((value) =>
+        value === 'all'
+          ? getIssueCount()
+          : getIssueCount({ status: value })
+      )
+    );
 
-  useEffect(() => {
-    fetchIssues();
+    setStatusCounts(
+      Object.fromEntries(statuses.map((value, i) => [value, counts[i]]))
+    );
   }, []);
 
-  const filteredIssues =
-    filter === 'all'
-      ? issues
-      : issues.filter((issue) => issue.status === filter);
+  const fetchIssues = useCallback(
+    async (targetPage = page) => {
+      try {
+        setLoading(true);
+        setError('');
 
-  const statusCounts = {
-    all: issues.length,
-    reported: issues.filter((issue) => issue.status === 'reported').length,
-    assigned: issues.filter((issue) => issue.status === 'assigned').length,
-    in_progress: issues.filter((issue) => issue.status === 'in_progress').length,
-    resolved: issues.filter((issue) => issue.status === 'resolved').length,
-    rejected: issues.filter((issue) => issue.status === 'rejected').length,
+        const params = { page: targetPage, limit: PAGE_SIZE };
+
+        if (filter !== 'all') params.status = filter;
+        if (debouncedSearch) params.search = debouncedSearch;
+
+        const response = await getIssues(params);
+
+        setIssues(response.data || []);
+        setPagination(
+          response.pagination || {
+            currentPage: targetPage,
+            totalPages: 1,
+            totalItems: 0,
+            pageSize: PAGE_SIZE,
+          }
+        );
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+          'Unable to load your issues. Please try again.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, filter, debouncedSearch]
+  );
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchCounts(), fetchIssues(page)]);
+  }, [fetchCounts, fetchIssues, page]);
+
+  useEffect(() => {
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchIssues(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filter, debouncedSearch]);
+
+  const handleFilterChange = (value) => {
+    setFilter(value);
+    setPage(1);
   };
 
   return (
@@ -136,12 +210,12 @@ function MyIssuesPage() {
           <div className="issues-list-heading">
             <div>
               <h2>Reported Issues</h2>
-              <p>{filteredIssues.length} issue(s) found</p>
+              <p>{pagination.totalItems} issue(s) found</p>
             </div>
 
             <button
               className="refresh-button"
-              onClick={fetchIssues}
+              onClick={refreshAll}
               disabled={loading}
               title="Refresh issues"
             >
@@ -150,19 +224,22 @@ function MyIssuesPage() {
             </button>
           </div>
 
+          <div className="my-issues-search">
+            <Search size={17} />
+            <input
+              type="text"
+              placeholder="Search by ticket ID, title or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           <div className="issue-filters">
-            {[
-              ['all', 'All'],
-              ['reported', 'Reported'],
-              ['assigned', 'Assigned'],
-              ['in_progress', 'In Progress'],
-              ['resolved', 'Resolved'],
-              ['rejected', 'Rejected'],
-            ].map(([value, label]) => (
+            {statusTabs.map(([value, label]) => (
               <button
                 key={value}
                 className={`filter-button ${filter === value ? 'active' : ''}`}
-                onClick={() => setFilter(value)}
+                onClick={() => handleFilterChange(value)}
               >
                 {label}
                 <span>{statusCounts[value]}</span>
@@ -178,21 +255,21 @@ function MyIssuesPage() {
           ) : error ? (
             <div className="issues-message error-message">
               <p>{error}</p>
-              <button onClick={fetchIssues}>Try Again</button>
+              <button onClick={refreshAll}>Try Again</button>
             </div>
-          ) : filteredIssues.length === 0 ? (
+          ) : issues.length === 0 ? (
             <div className="issues-empty-state">
               <div className="empty-icon">
                 <ClipboardList size={30} />
               </div>
               <h3>No issues found</h3>
               <p>
-                {filter === 'all'
+                {filter === 'all' && !debouncedSearch
                   ? "You haven't reported any issues yet."
-                  : `You don't have any ${statusLabels[filter]?.toLowerCase()} issues.`}
+                  : 'No issues match your current search or filters.'}
               </p>
 
-              {filter === 'all' && (
+              {filter === 'all' && !debouncedSearch && (
                 <button
                   className="new-issue-button"
                   onClick={() => navigate('/student/report-issue')}
@@ -204,7 +281,7 @@ function MyIssuesPage() {
             </div>
           ) : (
             <div className="issues-grid">
-              {filteredIssues.map((issue) => (
+              {issues.map((issue) => (
                 <article
                     className="issue-card"
                     key={issue._id}
@@ -262,6 +339,36 @@ function MyIssuesPage() {
 
                 </article>
               ))}
+            </div>
+          )}
+
+          {!loading && pagination.totalPages > 1 && (
+            <div className="my-issues-pagination">
+              <button
+                className="pagination-button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={pagination.currentPage <= 1}
+              >
+                <ChevronLeft size={16} />
+                Previous
+              </button>
+
+              <span className="pagination-info">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+
+              <button
+                className="pagination-button"
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(pagination.totalPages, p + 1)
+                  )
+                }
+                disabled={pagination.currentPage >= pagination.totalPages}
+              >
+                Next
+                <ChevronRight size={16} />
+              </button>
             </div>
           )}
         </section>

@@ -1,8 +1,6 @@
 import ApiError from '../utils/ApiError.js';
 
-export const validateRegister = (req, res, next) => {
-  const { fullName, email, password } = req.body;
-
+const validateUserFields = ({ fullName, email, password }) => {
   const errors = [];
 
   if (!fullName || typeof fullName !== 'string' || !fullName.trim()) {
@@ -20,6 +18,22 @@ export const validateRegister = (req, res, next) => {
   } else if (password.length < 8) {
     errors.push('Password must contain at least 8 characters');
   }
+
+  return errors;
+};
+
+export const validateRegister = (req, res, next) => {
+  const errors = validateUserFields(req.body);
+
+  if (errors.length > 0) {
+    return next(new ApiError(400, 'Validation failed', errors));
+  }
+
+  next();
+};
+
+export const validateCreateStaff = (req, res, next) => {
+  const errors = validateUserFields(req.body);
 
   if (errors.length > 0) {
     return next(new ApiError(400, 'Validation failed', errors));

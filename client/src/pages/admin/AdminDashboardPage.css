@@ -376,3 +376,13 @@
 .admin-manage-issues-button:hover {
   background: #6d28d9;
 }
+
+.admin-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-welcome-actions .admin-manage-issues-button {
+  margin-top: 0;
+}

@@ -13,11 +13,35 @@ class IssueRepository {
       .populate('statusHistory.updatedBy', 'fullName');
   }
 
-  async findAll(filter = {}) {
-    return Issue.find(filter)
-      .populate('reportedBy', 'fullName email')
-      .populate('assignedTo', 'fullName email')
-      .sort({ createdAt: -1 });
+  async findAll(filter = {}, { page = 1, limit = 10, search } = {}) {
+    const queryFilter = { ...filter };
+
+    if (search) {
+      const escapedSearch = search.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+      );
+      const regex = { $regex: escapedSearch, $options: 'i' };
+
+      queryFilter.$or = [
+        { ticketId: regex },
+        { title: regex },
+        { description: regex },
+        { location: regex },
+      ];
+    }
+
+    const [issues, totalItems] = await Promise.all([
+      Issue.find(queryFilter)
+        .populate('reportedBy', 'fullName email')
+        .populate('assignedTo', 'fullName email')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Issue.countDocuments(queryFilter),
+    ]);
+
+    return { issues, totalItems };
   }
 
   async findByIdAndUpdate(issueId, updateData) {

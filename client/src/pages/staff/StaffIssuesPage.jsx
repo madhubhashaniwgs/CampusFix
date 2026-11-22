@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -9,65 +9,118 @@ import {
   ClipboardList,
   AlertCircle,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-import { getIssues } from '../../services/issueService';
+import { getIssues, getIssueCount } from '../../services/issueService';
 
 import './StaffIssuesPage.css';
+
+const PAGE_SIZE = 10;
 
 function StaffIssuesPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    pageSize: PAGE_SIZE,
+  });
+  const [counts, setCounts] = useState({ total: 0, assigned: 0, inProgress: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
-  const fetchIssues = async () => {
-    try {
-      setLoading(true);
-      setError('');
+  const buildParams = useCallback(
+    (targetPage = page) => {
+      const params = { page: targetPage, limit: PAGE_SIZE };
 
-      const response = await getIssues();
-      setIssues(response.data || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Unable to load assigned issues.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (priorityFilter !== 'all') params.priority = priorityFilter;
+      if (categoryFilter !== 'all') params.category = categoryFilter;
 
-  useEffect(() => {
-    fetchIssues();
+      return params;
+    },
+    [page, debouncedSearch, statusFilter, priorityFilter, categoryFilter]
+  );
+
+  const fetchCounts = useCallback(async () => {
+    const [total, assigned, inProgress, resolved] = await Promise.all([
+      getIssueCount(),
+      getIssueCount({ status: 'assigned' }),
+      getIssueCount({ status: 'in_progress' }),
+      getIssueCount({ status: 'resolved' }),
+    ]);
+
+    setCounts({ total, assigned, inProgress, resolved });
   }, []);
 
-  const filteredIssues = useMemo(() => {
-    return issues.filter((issue) => {
-      const search = searchTerm.toLowerCase();
+  const fetchIssues = useCallback(
+    async (targetPage = page) => {
+      try {
+        setLoading(true);
+        setError('');
 
-      const matchesSearch =
-        issue.ticketId?.toLowerCase().includes(search) ||
-        issue.title?.toLowerCase().includes(search) ||
-        issue.location?.toLowerCase().includes(search) ||
-        issue.category?.toLowerCase().includes(search);
+        const response = await getIssues(buildParams(targetPage));
 
-      const matchesStatus =
-        statusFilter === 'all' ||
-        issue.status === statusFilter;
+        setIssues(response.data || []);
+        setPagination(
+          response.pagination || {
+            currentPage: targetPage,
+            totalPages: 1,
+            totalItems: 0,
+            pageSize: PAGE_SIZE,
+          }
+        );
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+          'Unable to load assigned issues.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [buildParams, page]
+  );
 
-      const matchesPriority =
-        priorityFilter === 'all' ||
-        issue.priority === priorityFilter;
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchCounts(), fetchIssues(page)]);
+  }, [fetchCounts, fetchIssues, page]);
 
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [issues, searchTerm, statusFilter, priorityFilter]);
+  useEffect(() => {
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchIssues(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, priorityFilter, categoryFilter]);
+
+  const handleFilterChange = (setter) => (event) => {
+    setter(event.target.value);
+    setPage(1);
+  };
 
   const formatStatus = (status) => {
     return status
@@ -121,7 +174,7 @@ function StaffIssuesPage() {
 
           <button
             className="staff-refresh-button"
-            onClick={fetchIssues}
+            onClick={refreshAll}
             disabled={loading}
           >
             <RefreshCw size={17} />
@@ -132,33 +185,27 @@ function StaffIssuesPage() {
         <section className="staff-issues-summary">
           <div>
             <span>Total Assigned Issues</span>
-            <strong>{loading ? '—' : issues.length}</strong>
+            <strong>{loading ? '—' : counts.total}</strong>
           </div>
 
           <div>
             <span>Pending</span>
             <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'assigned').length}
+              {loading ? '—' : counts.assigned}
             </strong>
           </div>
 
           <div>
             <span>In Progress</span>
             <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'in_progress').length}
+              {loading ? '—' : counts.inProgress}
             </strong>
           </div>
 
           <div>
             <span>Resolved</span>
             <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'resolved').length}
+              {loading ? '—' : counts.resolved}
             </strong>
           </div>
         </section>
@@ -168,7 +215,7 @@ function StaffIssuesPage() {
             <div>
               <h2>All Assigned Issues</h2>
               <p>
-                {filteredIssues.length} issue(s) found
+                {pagination.totalItems} issue(s) found
               </p>
             </div>
           </div>
@@ -186,7 +233,7 @@ function StaffIssuesPage() {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={handleFilterChange(setStatusFilter)}
             >
               <option value="all">All Statuses</option>
               <option value="assigned">Assigned</option>
@@ -197,7 +244,7 @@ function StaffIssuesPage() {
 
             <select
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
+              onChange={handleFilterChange(setPriorityFilter)}
             >
               <option value="all">All Priorities</option>
               <option value="low">Low</option>
@@ -205,20 +252,32 @@ function StaffIssuesPage() {
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
+
+            <select
+              value={categoryFilter}
+              onChange={handleFilterChange(setCategoryFilter)}
+            >
+              <option value="all">All Categories</option>
+              <option value="electrical">Electrical</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="it">IT</option>
+              <option value="furniture">Furniture</option>
+              <option value="other">Other</option>
+            </select>
           </div>
 
           {error ? (
             <div className="staff-issues-error">
               <AlertCircle size={19} />
               <span>{error}</span>
-              <button onClick={fetchIssues}>Retry</button>
+              <button onClick={refreshAll}>Retry</button>
             </div>
           ) : loading ? (
             <div className="staff-issues-state">
               <div className="staff-issues-spinner" />
               <p>Loading assigned issues...</p>
             </div>
-          ) : filteredIssues.length === 0 ? (
+          ) : issues.length === 0 ? (
             <div className="staff-issues-state">
               <ClipboardList size={38} />
               <h3>No Issues Found</h3>
@@ -243,7 +302,7 @@ function StaffIssuesPage() {
                 </thead>
 
                 <tbody>
-                  {filteredIssues.map((issue) => (
+                  {issues.map((issue) => (
                     <tr key={issue._id}>
                       <td className="staff-list-ticket">
                         {issue.ticketId}
@@ -290,6 +349,36 @@ function StaffIssuesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!loading && pagination.totalPages > 1 && (
+            <div className="staff-issues-pagination">
+              <button
+                className="pagination-button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={pagination.currentPage <= 1}
+              >
+                <ChevronLeft size={16} />
+                Previous
+              </button>
+
+              <span className="pagination-info">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+
+              <button
+                className="pagination-button"
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(pagination.totalPages, p + 1)
+                  )
+                }
+                disabled={pagination.currentPage >= pagination.totalPages}
+              >
+                Next
+                <ChevronRight size={16} />
+              </button>
             </div>
           )}
         </section>

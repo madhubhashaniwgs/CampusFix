@@ -13,6 +13,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
+import AdminStaffPage from './pages/admin/AdminStaffPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffIssuesPage from './pages/staff/StaffIssuesPage';
 import StaffIssueDetailsPage from './pages/staff/StaffIssueDetailsPage';
@@ -114,6 +115,11 @@ function App() {
         <Route
           path="/admin/issues/:id"
           element={<AdminIssueDetailsPage />}
+        />
+
+        <Route
+          path="/admin/staff"
+          element={<AdminStaffPage />}
         />
 
       </Route>

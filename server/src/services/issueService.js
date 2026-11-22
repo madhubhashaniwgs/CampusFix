@@ -54,16 +54,68 @@ class IssueService {
     }
   }
 
-  async getIssues(user) {
-    let filter = {};
+  async getIssues(user, query = {}) {
+    const conditions = [];
 
+    // Role scoping is always applied first so query parameters can
+    // never widen a student's or staff member's visible issues.
     if (user.role === 'student') {
-      filter.reportedBy = user.id;
+      conditions.push({ reportedBy: user.id });
     } else if (user.role === 'staff') {
-      filter.assignedTo = user.id;
+      conditions.push({ assignedTo: user.id });
     }
 
-    return issueRepository.findAll(filter);
+    if (query.status?.length) {
+      conditions.push({ status: { $in: query.status } });
+    }
+
+    if (query.priority) {
+      conditions.push({ priority: query.priority });
+    }
+
+    if (query.category) {
+      conditions.push({ category: query.category });
+    }
+
+    if (query.assignee === 'unassigned') {
+      conditions.push({ assignedTo: null });
+    }
+
+    if (query.dateFrom || query.dateTo) {
+      const createdAt = {};
+      if (query.dateFrom) createdAt.$gte = new Date(query.dateFrom);
+      if (query.dateTo) createdAt.$lte = new Date(query.dateTo);
+      conditions.push({ createdAt });
+    }
+
+    const filter =
+      conditions.length === 0
+        ? {}
+        : conditions.length === 1
+          ? conditions[0]
+          : { $and: conditions };
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+
+    const { issues, totalItems } = await issueRepository.findAll(
+      filter,
+      {
+        page,
+        limit,
+        search: query.search || undefined,
+      }
+    );
+
+    return {
+      issues,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        pageSize: limit,
+      },
+    };
   }
 
   async getIssueById(issueId, user) {

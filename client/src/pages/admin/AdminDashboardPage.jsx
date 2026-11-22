@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
-import { getIssues } from '../../services/issueService';
+import { getIssues, getIssueCount } from '../../services/issueService';
 
 import './AdminDashboardPage.css';
 
@@ -22,6 +22,13 @@ function AdminDashboardPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
+  const [totalIssues, setTotalIssues] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({
+    reported: 0,
+    assigned: 0,
+    in_progress: 0,
+    resolved: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -30,8 +37,23 @@ function AdminDashboardPage() {
       setLoading(true);
       setError('');
 
-      const response = await getIssues();
+      const [response, reported, assigned, inProgress, resolved] =
+        await Promise.all([
+          getIssues({ limit: 5 }),
+          getIssueCount({ status: 'reported' }),
+          getIssueCount({ status: 'assigned' }),
+          getIssueCount({ status: 'in_progress' }),
+          getIssueCount({ status: 'resolved' }),
+        ]);
+
       setIssues(response.data || []);
+      setTotalIssues(response.pagination?.totalItems || 0);
+      setStatusCounts({
+        reported,
+        assigned,
+        in_progress: inProgress,
+        resolved,
+      });
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -54,42 +76,37 @@ function AdminDashboardPage() {
   const statistics = [
     {
       title: 'Total Issues',
-      count: issues.length,
+      count: totalIssues,
       icon: ClipboardList,
       color: 'purple',
     },
     {
       title: 'Reported',
-      count: issues.filter((issue) => issue.status === 'reported').length,
+      count: statusCounts.reported,
       icon: AlertCircle,
       color: 'orange',
     },
     {
       title: 'Assigned',
-      count: issues.filter((issue) => issue.status === 'assigned').length,
+      count: statusCounts.assigned,
       icon: UserCheck,
       color: 'blue',
     },
     {
       title: 'In Progress',
-      count: issues.filter((issue) => issue.status === 'in_progress').length,
+      count: statusCounts.in_progress,
       icon: Clock,
       color: 'indigo',
     },
     {
       title: 'Resolved',
-      count: issues.filter((issue) => issue.status === 'resolved').length,
+      count: statusCounts.resolved,
       icon: CheckCircle,
       color: 'green',
     },
   ];
 
-  const recentIssues = [...issues]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt) - new Date(a.createdAt)
-    )
-    .slice(0, 5);
+  const recentIssues = issues;
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -134,6 +151,7 @@ function AdminDashboardPage() {
             Manage campus issues and monitor their progress.
         </p>
 
+        <div className="admin-welcome-actions">
         <button
             className="admin-manage-issues-button"
             onClick={() => navigate('/admin/issues')}
@@ -141,6 +159,15 @@ function AdminDashboardPage() {
             <ClipboardList size={19} />
             Manage All Issues
         </button>
+
+        <button
+            className="admin-manage-issues-button"
+            onClick={() => navigate('/admin/staff')}
+        >
+            <UserCheck size={19} />
+            Manage Staff
+        </button>
+        </div>
         </div>
 
           <button
