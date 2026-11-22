@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 
 import userRepository from '../repositories/userRepository.js';
+import auditService from './auditService.js';
 import ApiError from '../utils/ApiError.js';
 import generateToken from '../utils/generateToken.js';
 
@@ -35,6 +36,14 @@ class AuthService {
     });
 
     const token = generateToken(user._id, user.tokenVersion ?? 0);
+
+    // Anonymous actor: the account did not exist before this call.
+    await auditService.record({
+      action: 'user.registered',
+      actor: { userId: null, role: 'anonymous' },
+      target: { type: 'user', id: user._id },
+      metadata: { role: user.role, status: user.status },
+    });
 
     return {
       user: {
@@ -79,6 +88,12 @@ class AuthService {
 
     const token = generateToken(user._id, user.tokenVersion ?? 0);
 
+    await auditService.record({
+      action: 'user.login',
+      actor: { userId: user._id, role: user.role },
+      target: { type: 'user', id: user._id },
+    });
+
     return {
       user: {
         id: user._id,
@@ -109,6 +124,13 @@ class AuthService {
   // JWT issued before this point (i.e. all sessions for the user).
   async logout(userId) {
     await userRepository.incrementTokenVersion(userId);
+
+    const user = await userRepository.findById(userId);
+    await auditService.record({
+      action: 'user.logout',
+      actor: { userId, role: user?.role ?? 'anonymous' },
+      target: { type: 'user', id: userId },
+    });
   }
 
   // Verifies the current password, stores the new hash, and bumps
@@ -130,6 +152,12 @@ class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     const updated = await userRepository.updatePasswordAndBumpVersion(userId, hashedPassword);
+
+    await auditService.record({
+      action: 'user.password_changed',
+      actor: { userId, role: updated.role },
+      target: { type: 'user', id: userId },
+    });
 
     return {
       user: {

@@ -25,7 +25,7 @@ class IssueController {
   };
   createIssue = async (req, res, next) => {
     try {
-      const issue = await issueService.createIssue(req.body, req.user.id);
+      const issue = await issueService.createIssue(req.body, req.user);
 
       res.status(201).json(new ApiResponse(201, 'Issue reported successfully', issue));
     } catch (error) {
@@ -91,7 +91,7 @@ class IssueController {
     try {
       const { staffId } = req.body;
 
-      const issue = await issueService.assignIssue(req.params.id, staffId, req.user.id);
+      const issue = await issueService.assignIssue(req.params.id, staffId, req.user);
 
       res.status(200).json(new ApiResponse(200, 'Issue assigned successfully', issue));
     } catch (error) {

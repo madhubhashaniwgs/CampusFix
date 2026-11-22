@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  ScrollText,
 } from 'lucide-react';
 
 export default function AppLayout({ children, activeNav }) {
@@ -63,6 +64,7 @@ export default function AppLayout({ children, activeNav }) {
       { to: '/admin/issues', label: 'All Issues', icon: ClipboardList },
       { to: '/admin/staff', label: 'Staff Team', icon: Users },
       { to: '/admin/users', label: 'User Management', icon: UserRound },
+      { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
     ],
   };
 

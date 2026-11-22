@@ -1446,3 +1446,418 @@ describe('Cloudinary photo integration in issue creation', () => {
     assert.equal(res.status, 500);
   });
 });
+
+describe('Audit event integration', () => {
+  let AuditLog;
+  let cloudinaryService;
+
+  before(async () => {
+    AuditLog = (await import('../src/models/AuditLog.js')).default;
+    cloudinaryService = (await import('../src/services/cloudinaryService.js')).default;
+    await AuditLog.deleteMany({});
+  });
+
+  const lastLog = (action) => AuditLog.findOne({ action }).sort({ createdAt: -1 });
+
+  test('registration, login, logout, password change are audited', async () => {
+    const email = 'audit_auth@test.com';
+    await api('POST', '/api/auth/register', {
+      body: {
+        role: 'student',
+        fullName: 'Audit Auth',
+        email,
+        studentId: 'AU01',
+        password: 'TestPass123',
+      },
+    });
+
+    const regLog = await lastLog('user.registered');
+    assert.ok(regLog);
+    assert.equal(regLog.actor.role, 'anonymous');
+    assert.equal(regLog.actor.userId, null);
+    assert.equal(regLog.metadata.role, 'student');
+    assert.equal(regLog.metadata.status, 'active');
+
+    await loginAs(email);
+    const loginLog = await lastLog('user.login');
+    assert.ok(loginLog);
+    assert.equal(loginLog.actor.role, 'student');
+
+    await api('POST', '/api/auth/logout');
+    const logoutLog = await lastLog('user.logout');
+    assert.ok(logoutLog);
+
+    await loginAs(email);
+    await api('POST', '/api/auth/change-password', {
+      body: { currentPassword: 'TestPass123', newPassword: 'Audit5678' },
+    });
+    const pwLog = await lastLog('user.password_changed');
+    assert.ok(pwLog);
+  });
+
+  test('failed login does not produce a user.login audit event', async () => {
+    const before = await AuditLog.countDocuments({ action: 'user.login' });
+    await api('POST', '/api/auth/login', {
+      body: { email: 'audit_auth@test.com', password: 'WrongPass1' },
+    });
+    const after = await AuditLog.countDocuments({ action: 'user.login' });
+    assert.equal(after, before);
+  });
+
+  test('staff approval flow is audited', async () => {
+    await createUserDirect({
+      email: 'audit_admin@test.com',
+      role: 'admin',
+      password: 'TestPass123',
+    });
+    await loginAs('audit_admin@test.com');
+
+    const create = await api('POST', '/api/users/staff', {
+      body: {
+        fullName: 'Audit Staff',
+        email: 'audit_staff@test.com',
+        staffId: 'AS01',
+        department: 'IT',
+        password: 'Staff1234',
+      },
+    });
+    assert.equal(create.status, 201);
+    const createdLog = await lastLog('staff.created');
+    assert.ok(createdLog);
+    assert.equal(createdLog.actor.role, 'admin');
+    assert.equal(createdLog.target.type, 'user');
+
+    await api('POST', '/api/auth/register', {
+      body: {
+        role: 'staff',
+        fullName: 'Pending Staff',
+        email: 'audit_pending@test.com',
+        staffId: 'PS01',
+        department: 'HR',
+        password: 'Staff1234',
+      },
+    });
+    const pending = await User.findOne({ email: 'audit_pending@test.com' });
+
+    const approve = await api('PATCH', `/api/admin/staff/${pending._id}/approve`);
+    assert.equal(approve.status, 200);
+    const approveLog = await lastLog('staff.approved');
+    assert.ok(approveLog);
+    assert.equal(approveLog.metadata.status, 'active');
+
+    await api('PATCH', `/api/admin/staff/${pending._id}/reject`);
+    const rejectLog = await lastLog('staff.rejected');
+    assert.ok(rejectLog);
+    assert.equal(rejectLog.metadata.status, 'rejected');
+  });
+
+  test('issue lifecycle events are audited with correct metadata', async () => {
+    await createUserDirect({ email: 'audit_student@test.com', role: 'student' });
+    await loginAs('audit_student@test.com');
+
+    const issue = await api('POST', '/api/issues', {
+      body: {
+        title: 'Audit issue',
+        description: 'Testing audit trail',
+        category: 'it',
+        location: 'Lab 1',
+        priority: 'high',
+      },
+    });
+    assert.equal(issue.status, 201);
+    const issueId = issue.body.data._id;
+
+    const createdLog = await AuditLog.findOne({
+      action: 'issue.created',
+      'target.id': issueId,
+    });
+    assert.ok(createdLog);
+    assert.equal(createdLog.metadata.ticketId, issue.body.data.ticketId);
+    assert.equal(createdLog.metadata.priority, 'high');
+    assert.equal(createdLog.metadata.hasPhoto, false);
+
+    assert.equal(
+      await AuditLog.countDocuments({
+        action: 'issue.photo_uploaded',
+        'target.id': issueId,
+      }),
+      0
+    );
+
+    await createUserDirect({
+      email: 'audit_staff2@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    await createUserDirect({
+      email: 'audit_admin2@test.com',
+      role: 'admin',
+    });
+    const staffUser = await User.findOne({ email: 'audit_staff2@test.com' });
+    await loginAs('audit_admin2@test.com');
+    await api('PATCH', `/api/issues/${issueId}/assign`, {
+      body: { staffId: staffUser._id.toString() },
+    });
+
+    const assignLog = await AuditLog.findOne({
+      action: 'issue.assigned',
+      'target.id': issueId,
+    });
+    assert.ok(assignLog);
+    assert.equal(assignLog.metadata.toStaffId, staffUser._id.toString());
+    assert.equal(assignLog.metadata.fromStaffId, null);
+    assert.equal(assignLog.actor.role, 'admin');
+
+    const assignCount = await AuditLog.countDocuments({
+      action: 'issue.assigned',
+      'target.id': issueId,
+    });
+    await api('PATCH', `/api/issues/${issueId}/assign`, {
+      body: { staffId: staffUser._id.toString() },
+    });
+    assert.equal(
+      await AuditLog.countDocuments({
+        action: 'issue.assigned',
+        'target.id': issueId,
+      }),
+      assignCount
+    );
+
+    await loginAs('audit_staff2@test.com');
+    await api('PATCH', `/api/issues/${issueId}/status`, {
+      body: { status: 'in_progress' },
+    });
+    const statusLog = await AuditLog.findOne({
+      action: 'issue.status_changed',
+      'target.id': issueId,
+    });
+    assert.ok(statusLog);
+    assert.deepEqual(statusLog.metadata, {
+      from: 'assigned',
+      to: 'in_progress',
+    });
+  });
+
+  test('Cloudinary photo issue records photo_uploaded only on success', async () => {
+    await createUserDirect({ email: 'audit_photo@test.com', role: 'student' });
+    await loginAs('audit_photo@test.com');
+    const uid = await User.findOne({ email: 'audit_photo@test.com' }).then((u) => u._id.toString());
+
+    const token = cloudinaryService.signUploadToken(
+      'campusfix/issues/audit1',
+      uid,
+      'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/audit1.jpg'
+    );
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Photo audit',
+        description: 'With cloudinary photo',
+        category: 'other',
+        location: 'Roof',
+        photo: 'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/audit1.jpg',
+        photoToken: token,
+      },
+    });
+    assert.equal(res.status, 201);
+
+    const photoLog = await AuditLog.findOne({
+      action: 'issue.photo_uploaded',
+      'target.id': res.body.data._id,
+    });
+    assert.ok(photoLog);
+    assert.equal(photoLog.metadata.publicId, 'campusfix/issues/audit1');
+
+    const fail = await api('POST', '/api/issues', {
+      body: {
+        title: 'Bad photo audit',
+        description: 'Invalid token',
+        category: 'other',
+        location: 'Roof',
+        photo: 'https://res.cloudinary.com/demo/image/upload/v1/campusfix/issues/audit2.jpg',
+        photoToken: 'forged.token.here',
+      },
+    });
+    assert.equal(fail.status, 400);
+    assert.equal(await AuditLog.countDocuments({ action: 'issue.photo_uploaded' }), 1);
+  });
+
+  test('audit write failure does not break business operations', async () => {
+    const auditLogRepository = (await import('../src/repositories/auditLogRepository.js')).default;
+    const original = auditLogRepository.create;
+    auditLogRepository.create = async () => {
+      throw new Error('audit db down');
+    };
+
+    await createUserDirect({ email: 'audit_resilient@test.com', role: 'student' });
+    await loginAs('audit_resilient@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Still works',
+        description: 'Audit failure must not break this',
+        category: 'other',
+        location: 'Lobby',
+      },
+    });
+
+    auditLogRepository.create = original;
+    assert.equal(res.status, 201);
+  });
+});
+
+describe('Admin audit log API', () => {
+  let AuditLog;
+
+  before(async () => {
+    AuditLog = (await import('../src/models/AuditLog.js')).default;
+    await AuditLog.deleteMany({});
+  });
+
+  const seedLog = (overrides = {}) =>
+    AuditLog.create({
+      actor: { userId: null, role: 'anonymous' },
+      action: 'user.registered',
+      target: { type: 'user', id: new mongoose.Types.ObjectId() },
+      metadata: { role: 'student', status: 'active' },
+      ...overrides,
+    });
+
+  test('unauthenticated, student and staff get 401/403/403', async () => {
+    // Unauthenticated (CSRF cookie only, no auth).
+    const csrfRes = await fetch(`${baseUrl}/api/auth/csrf`, { bare: true });
+    void csrfRes;
+
+    await createUserDirect({ email: 'audit_api_student@test.com', role: 'student' });
+    await loginAs('audit_api_student@test.com');
+    const studentRes = await api('GET', '/api/admin/audit-logs');
+    assert.equal(studentRes.status, 403);
+
+    await createUserDirect({
+      email: 'audit_api_staff@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    await loginAs('audit_api_staff@test.com');
+    const staffRes = await api('GET', '/api/admin/audit-logs');
+    assert.equal(staffRes.status, 403);
+  });
+
+  test('admin can list audit logs with pagination metadata', async () => {
+    for (let i = 0; i < 12; i++) {
+      await seedLog({ action: 'user.login' });
+    }
+    await createUserDirect({ email: 'audit_api_admin@test.com', role: 'admin' });
+    await loginAs('audit_api_admin@test.com');
+
+    const res = await api('GET', '/api/admin/audit-logs?page=1&limit=10');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.length, 10);
+    // Other tests in this file also produce audit events; assert the
+    // pagination math rather than an exact total.
+    assert.ok(res.body.pagination.totalItems >= 12);
+    assert.equal(res.body.pagination.totalPages, Math.ceil(res.body.pagination.totalItems / 10));
+    assert.equal(res.body.pagination.page, 1);
+    assert.equal(res.body.pagination.pageSize, 10);
+  });
+
+  test('filters: action, actorId, targetType, date range', async () => {
+    const adminUser = await User.findOne({ email: 'audit_api_admin@test.com' });
+    const actorId = new mongoose.Types.ObjectId();
+    const old = new Date('2020-01-01T00:00:00Z');
+    const recent = new Date();
+
+    await seedLog({
+      action: 'issue.assigned',
+      actor: { userId: actorId, role: 'admin' },
+      target: { type: 'issue', id: new mongoose.Types.ObjectId() },
+      createdAt: old,
+    });
+    await seedLog({
+      action: 'issue.assigned',
+      actor: { userId: actorId, role: 'admin' },
+      target: { type: 'issue', id: new mongoose.Types.ObjectId() },
+      createdAt: recent,
+    });
+
+    await loginAs('audit_api_admin@test.com');
+
+    const byAction = await api('GET', '/api/admin/audit-logs?action=issue.assigned');
+    assert.ok(byAction.body.data.every((l) => l.action === 'issue.assigned'));
+
+    const byActor = await api('GET', `/api/admin/audit-logs?actorId=${actorId}`);
+    assert.ok(byActor.body.data.length >= 2);
+    assert.ok(byActor.body.data.every((l) => l.actor.userId === actorId.toString()));
+
+    const byTarget = await api('GET', '/api/admin/audit-logs?targetType=issue');
+    assert.ok(byTarget.body.data.every((l) => l.target.type === 'issue'));
+
+    const byDate = await api(
+      'GET',
+      `/api/admin/audit-logs?startDate=${encodeURIComponent('2019-01-01')}&endDate=${encodeURIComponent('2021-01-01')}`
+    );
+    assert.equal(byDate.body.data.length, 1);
+    assert.equal(byDate.body.data[0].action, 'issue.assigned');
+
+    void adminUser;
+  });
+
+  test('invalid query values are rejected', async () => {
+    await loginAs('audit_api_admin@test.com');
+
+    const bad = [
+      '/api/admin/audit-logs?page=0',
+      '/api/admin/audit-logs?page=abc',
+      '/api/admin/audit-logs?limit=0',
+      '/api/admin/audit-logs?limit=101',
+      '/api/admin/audit-logs?action=admin.nuke',
+      '/api/admin/audit-logs?actorId=not-an-id',
+      '/api/admin/audit-logs?targetType=server',
+      '/api/admin/audit-logs?startDate=not-a-date',
+      '/api/admin/audit-logs?startDate=2025-01-01&endDate=2020-01-01',
+    ];
+
+    for (const path of bad) {
+      const res = await api('GET', path);
+      assert.equal(res.status, 400, `expected 400 for ${path}`);
+    }
+  });
+
+  test('empty result returns empty array with pagination', async () => {
+    await loginAs('audit_api_admin@test.com');
+    const res = await api(
+      'GET',
+      '/api/admin/audit-logs?action=user.password_changed&actorId=000000000000000000000000'
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.data, []);
+    assert.equal(res.body.pagination.totalItems, 0);
+    assert.equal(res.body.pagination.totalPages, 0);
+  });
+
+  test('results are newest-first and expose no secrets', async () => {
+    await seedLog({
+      action: 'user.logout',
+      metadata: {},
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    await seedLog({
+      action: 'user.login',
+      metadata: {},
+    });
+
+    await loginAs('audit_api_admin@test.com');
+    const res = await api('GET', '/api/admin/audit-logs?limit=100');
+    const times = res.body.data.map((l) => new Date(l.createdAt).getTime());
+    for (let i = 1; i < times.length; i++) {
+      assert.ok(times[i - 1] >= times[i], 'not sorted newest first');
+    }
+
+    const first = res.body.data[0];
+    assert.equal(first.password, undefined);
+    assert.equal(first.token, undefined);
+    assert.equal(first.jwt, undefined);
+    assert.equal(first.csrf, undefined);
+  });
+});

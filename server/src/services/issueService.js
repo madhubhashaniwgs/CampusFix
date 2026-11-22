@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import issueRepository from '../repositories/issueRepository.js';
 import userRepository from '../repositories/userRepository.js';
 import cloudinaryService from './cloudinaryService.js';
+import auditService from './auditService.js';
 import ApiError from '../utils/ApiError.js';
 
 const isCloudinaryUrl = (photo) => {
@@ -18,7 +19,8 @@ const isCloudinaryUrl = (photo) => {
 };
 
 class IssueService {
-  async createIssue(issueData, userId) {
+  async createIssue(issueData, user) {
+    const userId = user.id ?? user._id;
     const maxAttempts = 3;
 
     // Cloudinary photos must carry a valid upload token proving the
@@ -62,7 +64,33 @@ class IssueService {
           ],
         });
 
-        return issueRepository.findById(issue._id);
+        const created = await issueRepository.findById(issue._id);
+
+        await auditService.record({
+          action: 'issue.created',
+          actor: { userId, role: user.role },
+          target: { type: 'issue', id: created._id },
+          metadata: {
+            ticketId: created.ticketId,
+            category: created.category,
+            priority: created.priority,
+            hasPhoto: Boolean(created.photo),
+          },
+        });
+
+        // Photo upload is only audited once the image is actually
+        // attached to a successfully created issue — a bare Cloudinary
+        // upload or a failed creation produces no event.
+        if (photoPublicId) {
+          await auditService.record({
+            action: 'issue.photo_uploaded',
+            actor: { userId, role: user.role },
+            target: { type: 'issue', id: created._id },
+            metadata: { publicId: photoPublicId },
+          });
+        }
+
+        return created;
       } catch (error) {
         const isTicketIdConflict =
           error.code === 11000 &&
@@ -201,7 +229,7 @@ class IssueService {
       throw new ApiError(400, `Cannot change issue status from ${issue.status} to ${status}`);
     }
 
-    return issueRepository.findByIdAndUpdate(issueId, {
+    const updated = await issueRepository.findByIdAndUpdate(issueId, {
       $set: { status },
       $push: {
         statusHistory: {
@@ -212,6 +240,15 @@ class IssueService {
         },
       },
     });
+
+    await auditService.record({
+      action: 'issue.status_changed',
+      actor: { userId: user.id, role: user.role },
+      target: { type: 'issue', id: issueId },
+      metadata: { from: issue.status, to: status },
+    });
+
+    return updated;
   }
 
   async getStaffMembers({ page = 1, limit = 10 } = {}) {
@@ -234,7 +271,8 @@ class IssueService {
     };
   }
 
-  async assignIssue(issueId, staffId, adminId) {
+  async assignIssue(issueId, staffId, admin) {
+    const adminId = admin.id ?? admin._id;
     if (!mongoose.isValidObjectId(issueId) || !mongoose.isValidObjectId(staffId)) {
       throw new ApiError(400, 'Invalid issue ID or staff ID');
     }
@@ -266,13 +304,23 @@ class IssueService {
     }
 
     const isReassignment = Boolean(issue.assignedTo);
+    const previousAssignee = issue.assignedTo?._id?.toString() ?? null;
 
-    return issueRepository.assignStaff(
+    const assigned = await issueRepository.assignStaff(
       issueId,
       staffId,
       adminId,
       isReassignment ? 'Issue reassigned to staff member' : 'Issue assigned to staff member'
     );
+
+    await auditService.record({
+      action: 'issue.assigned',
+      actor: { userId: adminId, role: admin.role },
+      target: { type: 'issue', id: issueId },
+      metadata: { fromStaffId: previousAssignee, toStaffId: staffId },
+    });
+
+    return assigned;
   }
 }
 

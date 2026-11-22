@@ -11,6 +11,7 @@ import ApiResponse from './utils/ApiResponse.js';
 import issueRoutes from './routes/issueRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -54,6 +55,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/audit-logs', auditRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

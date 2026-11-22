@@ -4,7 +4,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 class UserController {
   createStaff = async (req, res, next) => {
     try {
-      const user = await userService.createStaff(req.body);
+      const user = await userService.createStaff(req.body, req.user);
 
       res.status(201).json(new ApiResponse(201, 'Staff account created successfully', user));
     } catch (error) {
@@ -31,7 +31,7 @@ class UserController {
 
   approveStaff = async (req, res, next) => {
     try {
-      const user = await userService.approveStaff(req.params.id);
+      const user = await userService.approveStaff(req.params.id, req.user);
 
       res.status(200).json(new ApiResponse(200, 'Staff member approved', user));
     } catch (error) {
@@ -41,7 +41,7 @@ class UserController {
 
   rejectStaff = async (req, res, next) => {
     try {
-      const user = await userService.rejectStaff(req.params.id);
+      const user = await userService.rejectStaff(req.params.id, req.user);
 
       res.status(200).json(new ApiResponse(200, 'Staff registration rejected', user));
     } catch (error) {

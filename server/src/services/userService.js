@@ -2,10 +2,11 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
 import userRepository from '../repositories/userRepository.js';
+import auditService from './auditService.js';
 import ApiError from '../utils/ApiError.js';
 
 class UserService {
-  async createStaff(userData) {
+  async createStaff(userData, actor = null) {
     const fullName = userData.fullName.trim();
     const email = userData.email.trim().toLowerCase();
 
@@ -34,6 +35,15 @@ class UserService {
         userData.department && String(userData.department).trim()
           ? String(userData.department).trim()
           : null,
+    });
+
+    await auditService.record({
+      action: 'staff.created',
+      actor: actor
+        ? { userId: actor.id ?? actor._id, role: actor.role }
+        : { userId: null, role: 'anonymous' },
+      target: { type: 'user', id: user._id },
+      metadata: { role: 'staff' },
     });
 
     return {
@@ -76,7 +86,7 @@ class UserService {
     };
   }
 
-  async approveStaff(userId) {
+  async approveStaff(userId, actor = null) {
     if (!mongoose.isValidObjectId(userId)) {
       throw new ApiError(400, 'Invalid staff member ID');
     }
@@ -109,6 +119,15 @@ class UserService {
 
     const updated = await userRepository.setUserStatus(userId, 'active');
 
+    await auditService.record({
+      action: 'staff.approved',
+      actor: actor
+        ? { userId: actor.id ?? actor._id, role: actor.role }
+        : { userId: null, role: 'anonymous' },
+      target: { type: 'user', id: userId },
+      metadata: { status: 'active' },
+    });
+
     return {
       id: updated._id,
       fullName: updated.fullName,
@@ -118,7 +137,7 @@ class UserService {
     };
   }
 
-  async rejectStaff(userId) {
+  async rejectStaff(userId, actor = null) {
     if (!mongoose.isValidObjectId(userId)) {
       throw new ApiError(400, 'Invalid staff member ID');
     }
@@ -146,6 +165,15 @@ class UserService {
     }
 
     const updated = await userRepository.setUserStatus(userId, 'rejected');
+
+    await auditService.record({
+      action: 'staff.rejected',
+      actor: actor
+        ? { userId: actor.id ?? actor._id, role: actor.role }
+        : { userId: null, role: 'anonymous' },
+      target: { type: 'user', id: userId },
+      metadata: { status: 'rejected' },
+    });
 
     return {
       id: updated._id,
