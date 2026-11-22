@@ -23,15 +23,20 @@ class IssueController {
 
   getIssues = async (req, res, next) => {
     try {
-      const issues = await issueService.getIssues(req.user);
-
-      res.status(200).json(
-        new ApiResponse(
-          200,
-          'Issues retrieved successfully',
-          issues
-        )
+      const { issues, pagination } = await issueService.getIssues(
+        req.user,
+        req.issueListQuery || {}
       );
+
+      const response = new ApiResponse(
+        200,
+        'Issues retrieved successfully',
+        issues
+      );
+
+      response.pagination = pagination;
+
+      res.status(200).json(response);
     } catch (error) {
       next(error);
     }

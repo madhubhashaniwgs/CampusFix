@@ -1,301 +1,452 @@
-
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ShieldCheck,
-  LayoutDashboard,
   Search,
   RefreshCw,
-  ClipboardList,
-  AlertCircle,
-  Eye,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Edit3,
 } from 'lucide-react';
 
-import { getIssues } from '../../services/issueService';
+import AppLayout from '../../components/layouts/AppLayout';
+import IssueCard from '../../components/issues/IssueCard';
+import IssuePhoto from '../../components/common/IssuePhoto';
+import StatusBadge from '../../components/common/StatusBadge';
+import PriorityBadge from '../../components/common/PriorityBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
+import ImageModal from '../../components/common/ImageModal';
+import QuickStatusModal from '../../components/issues/QuickStatusModal';
+import EmptyState from '../../components/common/EmptyState';
+import { getIssues, getIssueCount } from '../../services/issueService';
 
-import './StaffIssuesPage.css';
+const PAGE_SIZE = 10;
 
-function StaffIssuesPage() {
+const STATUS_TABS = [
+  { value: 'all', label: 'All Assigned' },
+  { value: 'assigned', label: 'Awaiting Action' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'resolved', label: 'Resolved' },
+];
+
+const CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'it', label: 'IT & Equipment' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'other', label: 'General / Facility' },
+];
+
+const PRIORITIES = [
+  { value: 'all', label: 'All Priorities' },
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
+
+export default function StaffIssuesPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    pageSize: PAGE_SIZE,
+  });
+  const [statusCounts, setStatusCounts] = useState({});
+  const [filter, setFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-
-  const fetchIssues = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const response = await getIssues();
-      setIssues(response.data || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Unable to load assigned issues.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('grid');
+  const [activePhoto, setActivePhoto] = useState({ isOpen: false, src: '', title: '' });
+  const [statusModalIssue, setStatusModalIssue] = useState(null);
 
   useEffect(() => {
-    fetchIssues();
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const counts = await Promise.all(
+        STATUS_TABS.map((t) =>
+          t.value === 'all'
+            ? getIssueCount()
+            : getIssueCount({ status: t.value })
+        )
+      );
+      const map = {};
+      STATUS_TABS.forEach((t, i) => {
+        map[t.value] = counts[i];
+      });
+      setStatusCounts(map);
+    } catch {
+      // Ignore
+    }
   }, []);
 
-  const filteredIssues = useMemo(() => {
-    return issues.filter((issue) => {
-      const search = searchTerm.toLowerCase();
+  const fetchIssues = useCallback(
+    async (targetPage = page) => {
+      try {
+        setLoading(true);
+        const params = { page: targetPage, limit: PAGE_SIZE };
+        if (filter !== 'all') params.status = filter;
+        if (categoryFilter !== 'all') params.category = categoryFilter;
+        if (priorityFilter !== 'all') params.priority = priorityFilter;
+        if (debouncedSearch) params.search = debouncedSearch;
 
-      const matchesSearch =
-        issue.ticketId?.toLowerCase().includes(search) ||
-        issue.title?.toLowerCase().includes(search) ||
-        issue.location?.toLowerCase().includes(search) ||
-        issue.category?.toLowerCase().includes(search);
+        const res = await getIssues(params);
+        setIssues(res.data || []);
+        setPagination(
+          res.pagination || {
+            currentPage: targetPage,
+            totalPages: 1,
+            totalItems: 0,
+            pageSize: PAGE_SIZE,
+          }
+        );
+      } catch {
+        setIssues([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filter, categoryFilter, priorityFilter, debouncedSearch, page]
+  );
 
-      const matchesStatus =
-        statusFilter === 'all' ||
-        issue.status === statusFilter;
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
 
-      const matchesPriority =
-        priorityFilter === 'all' ||
-        issue.priority === priorityFilter;
+  useEffect(() => {
+    fetchIssues(page);
+  }, [fetchIssues, page]);
 
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [issues, searchTerm, statusFilter, priorityFilter]);
-
-  const formatStatus = (status) => {
-    return status
-      ?.replaceAll('_', ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+  const resetFilters = () => {
+    setFilter('all');
+    setCategoryFilter('all');
+    setPriorityFilter('all');
+    setSearchTerm('');
+    setPage(1);
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+  const hasActiveFilters =
+    filter !== 'all' ||
+    categoryFilter !== 'all' ||
+    priorityFilter !== 'all' ||
+    debouncedSearch !== '';
 
   return (
-    <div className="staff-issues-page">
-      <header className="staff-issues-header">
-        <div className="staff-issues-brand">
-          <div className="staff-issues-brand-icon">
-            <ShieldCheck size={24} />
-          </div>
-          <span>CampusFix</span>
-          <span className="staff-issues-portal-label">
-            STAFF PORTAL
-          </span>
+    <AppLayout activeNav="issues">
+      <ImageModal
+        isOpen={activePhoto.isOpen}
+        src={activePhoto.src}
+        title={activePhoto.title}
+        onClose={() => setActivePhoto({ isOpen: false, src: '', title: '' })}
+      />
+
+      <QuickStatusModal
+        isOpen={Boolean(statusModalIssue)}
+        issue={statusModalIssue}
+        onClose={() => setStatusModalIssue(null)}
+        onUpdated={() => {
+          fetchCounts();
+          fetchIssues(page);
+        }}
+      />
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-purple-950 tracking-tight">
+            Assigned Work Orders
+          </h1>
+          <p className="text-sm text-purple-900/70 mt-1">
+            Manage your daily repair queue, update statuses, and log resolution notes.
+          </p>
         </div>
 
         <button
-          className="staff-dashboard-nav-button"
-          onClick={() => navigate('/staff/dashboard')}
+          onClick={() => {
+            fetchCounts();
+            fetchIssues(page);
+          }}
+          className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start sm:self-auto"
+          title="Refresh queue"
         >
-          <LayoutDashboard size={17} />
-          Dashboard
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
         </button>
-      </header>
+      </div>
 
-      <main className="staff-issues-content">
-        <div className="staff-issues-heading">
-          <div>
-            <span className="staff-issues-eyebrow">
-              ISSUE MANAGEMENT
-            </span>
-            <h1>Assigned Issues</h1>
-            <p>
-              View and manage campus issues assigned to you.
-            </p>
-          </div>
-
-          <button
-            className="staff-refresh-button"
-            onClick={fetchIssues}
-            disabled={loading}
-          >
-            <RefreshCw size={17} />
-            Refresh
-          </button>
+      {/* Filter & Search Bar */}
+      <div className="purple-card rounded-3xl p-4 sm:p-5 mb-6 space-y-4">
+        {/* Status Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {STATUS_TABS.map((tab) => {
+            const isActive = filter === tab.value;
+            const count = statusCounts[tab.value];
+            return (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setFilter(tab.value);
+                  setPage(1);
+                }}
+                className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-purple-700 text-white shadow-sm shadow-purple-700/25'
+                    : 'bg-purple-100/70 hover:bg-purple-200 text-purple-900'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {count !== undefined && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-purple-200 text-purple-900'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <section className="staff-issues-summary">
-          <div>
-            <span>Total Assigned Issues</span>
-            <strong>{loading ? '—' : issues.length}</strong>
+        {/* Search & Dropdown Filters Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-purple-100">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search assigned tickets by title, location or ID..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-medium text-purple-950 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none transition-all placeholder:text-purple-400"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-700 p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          <div>
-            <span>Pending</span>
-            <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'assigned').length}
-            </strong>
-          </div>
-
-          <div>
-            <span>In Progress</span>
-            <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'in_progress').length}
-            </strong>
-          </div>
-
-          <div>
-            <span>Resolved</span>
-            <strong>
-              {loading
-                ? '—'
-                : issues.filter((issue) => issue.status === 'resolved').length}
-            </strong>
-          </div>
-        </section>
-
-        <section className="staff-issues-list-card">
-          <div className="staff-issues-list-heading">
-            <div>
-              <h2>All Assigned Issues</h2>
-              <p>
-                {filteredIssues.length} issue(s) found
-              </p>
-            </div>
-          </div>
-
-          <div className="staff-issues-filters">
-            <div className="staff-issues-search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search ticket, title, location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
+          <div className="flex items-center gap-2 flex-wrap">
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-900 outline-none focus:border-purple-600"
             >
-              <option value="all">All Statuses</option>
-              <option value="assigned">Assigned</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="rejected">Rejected</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
             </select>
 
             <select
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-900 outline-none focus:border-purple-600"
             >
-              <option value="all">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              {PRIORITIES.map((pri) => (
+                <option key={pri.value} value={pri.value}>
+                  {pri.label}
+                </option>
+              ))}
             </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-purple-100/90 p-1 rounded-xl border border-purple-200 ml-auto sm:ml-0">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-purple-700 hover:text-purple-950'
+                }`}
+                title="Grid Cards View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-purple-700 hover:text-purple-950'
+                }`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {error ? (
-            <div className="staff-issues-error">
-              <AlertCircle size={19} />
-              <span>{error}</span>
-              <button onClick={fetchIssues}>Retry</button>
-            </div>
-          ) : loading ? (
-            <div className="staff-issues-state">
-              <div className="staff-issues-spinner" />
-              <p>Loading assigned issues...</p>
-            </div>
-          ) : filteredIssues.length === 0 ? (
-            <div className="staff-issues-state">
-              <ClipboardList size={38} />
-              <h3>No Issues Found</h3>
-              <p>
-                No issues match your current search or filters.
-              </p>
-            </div>
-          ) : (
-            <div className="staff-issues-table-wrapper">
-              <table className="staff-issues-list-table">
-                <thead>
-                  <tr>
-                    <th>Ticket ID</th>
-                    <th>Issue</th>
-                    <th>Category</th>
-                    <th>Location</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Reported Date</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredIssues.map((issue) => (
-                    <tr key={issue._id}>
-                      <td className="staff-list-ticket">
-                        {issue.ticketId}
-                      </td>
-
-                      <td className="staff-list-title">
+      {/* Issues Listing */}
+      {loading ? (
+        <div className="py-20 text-center">
+          <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-purple-900/70 font-semibold">Loading assigned issues...</p>
+        </div>
+      ) : issues.length === 0 ? (
+        <EmptyState
+          title={hasActiveFilters ? 'No matching issues found' : 'No issues assigned to you'}
+          description={
+            hasActiveFilters
+              ? 'Try relaxing your filters or search keywords.'
+              : 'You have no tickets currently assigned in this category.'
+          }
+          actionLabel={hasActiveFilters ? 'Clear Filters' : 'Refresh Queue'}
+          onAction={hasActiveFilters ? resetFilters : () => fetchIssues(1)}
+        />
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {issues.map((issue) => (
+            <IssueCard
+              key={issue._id}
+              issue={issue}
+              onClick={() => navigate(`/staff/issues/${issue._id}`)}
+              onPhotoClick={(src, title) => setActivePhoto({ isOpen: true, src, title })}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="purple-card rounded-3xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-purple-200 text-purple-950 font-bold uppercase tracking-wider bg-purple-100/80">
+                  <th className="py-3.5 px-4">Ticket</th>
+                  <th className="py-3.5 px-4">Issue Details</th>
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">Location</th>
+                  <th className="py-3.5 px-4">Priority</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-purple-100 bg-white/70">
+                {issues.map((issue) => (
+                  <tr
+                    key={issue._id}
+                    onClick={() => navigate(`/staff/issues/${issue._id}`)}
+                    className="hover:bg-purple-100/60 cursor-pointer transition-colors group"
+                  >
+                    <td className="py-3 px-4 font-mono font-black text-purple-800 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <IssuePhoto
+                          src={issue.photo}
+                          alt={issue.title}
+                          category={issue.category}
+                          variant="thumbnail"
+                        />
+                        <span>{issue.ticketId}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 max-w-xs">
+                      <p className="font-bold text-purple-950 group-hover:text-purple-700 transition-colors truncate">
                         {issue.title}
-                      </td>
+                      </p>
+                      <p className="text-[11px] text-purple-900/70 truncate">{issue.description}</p>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <CategoryBadge category={issue.category} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 text-purple-950 font-medium max-w-[150px] truncate whitespace-nowrap">
+                      {issue.location}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <PriorityBadge priority={issue.priority} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <StatusBadge status={issue.status} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStatusModalIssue(issue);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded-lg transition-colors shadow-xs"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        Update
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                      <td>{issue.category}</td>
+      {/* Pagination Bar */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between border-t border-purple-200 pt-4 px-2">
+          <p className="text-xs text-purple-900/70 font-medium">
+            Showing <strong className="text-purple-950">{(page - 1) * PAGE_SIZE + 1}</strong> to{' '}
+            <strong className="text-purple-950">
+              {Math.min(page * PAGE_SIZE, pagination.totalItems)}
+            </strong>{' '}
+            of <strong className="text-purple-950">{pagination.totalItems}</strong> tickets
+          </p>
 
-                      <td>{issue.location}</td>
-
-                      <td>
-                        <span
-                          className={`staff-list-priority ${issue.priority}`}
-                        >
-                          {issue.priority}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`staff-list-status ${issue.status}`}
-                        >
-                          {formatStatus(issue.status)}
-                        </span>
-                      </td>
-
-                      <td>{formatDate(issue.createdAt)}</td>
-
-                      <td>
-                        <button
-                          className="staff-view-issue-button"
-                          onClick={() =>
-                            navigate(`/staff/issues/${issue._id}`)
-                          }
-                        >
-                          <Eye size={16} />
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-purple-200 bg-white/80 text-xs font-bold text-purple-800 hover:bg-purple-100 disabled:opacity-40 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+            <span className="text-xs font-black text-purple-950 px-2 font-mono">
+              {page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+              disabled={page >= pagination.totalPages}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-purple-200 bg-white/80 text-xs font-bold text-purple-800 hover:bg-purple-100 disabled:opacity-40 transition-colors"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </AppLayout>
   );
 }
-
-export default StaffIssuesPage;

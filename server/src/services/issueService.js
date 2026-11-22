@@ -2,43 +2,121 @@ import { randomBytes } from 'crypto';
 import mongoose from 'mongoose';
 
 import issueRepository from '../repositories/issueRepository.js';
+import userRepository from '../repositories/userRepository.js';
 import ApiError from '../utils/ApiError.js';
 
 class IssueService {
   async createIssue(issueData, userId) {
-    const ticketId = `CF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    const maxAttempts = 3;
 
-    const issue = await issueRepository.create({
-    title: issueData.title,
-    description: issueData.description,
-    category: issueData.category,
-    location: issueData.location,
-    priority: issueData.priority || 'medium',
-    ticketId,
-    reportedBy: userId,
-    status: 'reported',
-    statusHistory: [
-        {
-        status: 'reported',
-        updatedBy: userId,
-        note: 'Issue reported',
-        },
-    ],
-    });
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const ticketId = `CF-${randomBytes(4).toString('hex').toUpperCase()}`;
 
-    return issueRepository.findById(issue._id);
+      try {
+        const issue = await issueRepository.create({
+          title: issueData.title,
+          description: issueData.description,
+          category: issueData.category,
+          location: issueData.location,
+          priority: issueData.priority || 'medium',
+          photo: issueData.photo || null,
+          ticketId,
+          reportedBy: userId,
+          status: 'reported',
+          statusHistory: [
+            {
+              status: 'reported',
+              updatedBy: userId,
+              note: 'Issue reported',
+            },
+          ],
+        });
+
+        return issueRepository.findById(issue._id);
+      } catch (error) {
+        const isTicketIdConflict =
+          error.code === 11000 &&
+          error.keyPattern &&
+          Object.prototype.hasOwnProperty.call(
+            error.keyPattern,
+            'ticketId'
+          );
+
+        if (!isTicketIdConflict || attempt === maxAttempts - 1) {
+          if (isTicketIdConflict) {
+            throw new ApiError(
+              500,
+              'Unable to generate a unique ticket ID. Please try again.'
+            );
+          }
+          throw error;
+        }
+      }
+    }
   }
 
-  async getIssues(user) {
-    let filter = {};
+  async getIssues(user, query = {}) {
+    const conditions = [];
 
+    // Role scoping is always applied first so query parameters can
+    // never widen a student's or staff member's visible issues.
     if (user.role === 'student') {
-      filter.reportedBy = user.id;
+      conditions.push({ reportedBy: user.id });
     } else if (user.role === 'staff') {
-      filter.assignedTo = user.id;
+      conditions.push({ assignedTo: user.id });
     }
 
-    return issueRepository.findAll(filter);
+    if (query.status?.length) {
+      conditions.push({ status: { $in: query.status } });
+    }
+
+    if (query.priority) {
+      conditions.push({ priority: query.priority });
+    }
+
+    if (query.category) {
+      conditions.push({ category: query.category });
+    }
+
+    if (query.assignee === 'unassigned') {
+      conditions.push({ assignedTo: null });
+    }
+
+    if (query.dateFrom || query.dateTo) {
+      const createdAt = {};
+      if (query.dateFrom) createdAt.$gte = new Date(query.dateFrom);
+      if (query.dateTo) createdAt.$lte = new Date(query.dateTo);
+      conditions.push({ createdAt });
+    }
+
+    const filter =
+      conditions.length === 0
+        ? {}
+        : conditions.length === 1
+          ? conditions[0]
+          : { $and: conditions };
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+
+    const { issues, totalItems } = await issueRepository.findAll(
+      filter,
+      {
+        page,
+        limit,
+        search: query.search || undefined,
+      }
+    );
+
+    return {
+      issues,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        pageSize: limit,
+      },
+    };
   }
 
   async getIssueById(issueId, user) {
@@ -102,7 +180,7 @@ class IssueService {
       );
     }
 
-    const updatedIssue = await issueRepository.findByIdAndUpdate(
+    return issueRepository.findByIdAndUpdate(
       issueId,
       {
         $set: { status },
@@ -116,8 +194,6 @@ class IssueService {
         },
       }
     );
-
-    return issueRepository.findById(updatedIssue._id);
   }
 
     async getStaffMembers() {
@@ -138,27 +214,38 @@ class IssueService {
         throw new ApiError(404, 'Issue not found');
     }
 
-    const staff = await issueRepository.findStaffMembers();
+    // Assignment sets status to 'assigned', so it is only valid from
+    // 'reported' (first assignment) or 'assigned' (reassignment).
+    // This reuses the same transition rules as updateIssueStatus and
+    // prevents in_progress/resolved/rejected issues from being reset.
+    if (!['reported', 'assigned'].includes(issue.status)) {
+        throw new ApiError(
+        400,
+        `Cannot assign an issue with status "${issue.status}"`
+        );
+    }
 
-    const selectedStaff = staff.find(
-        (member) => member._id.toString() === staffId
-    );
+    const staff = await userRepository.findActiveStaffById(staffId);
 
-    if (!selectedStaff) {
+    if (!staff) {
         throw new ApiError(404, 'Active staff member not found');
     }
 
-    if (['resolved', 'rejected'].includes(issue.status)) {
-        throw new ApiError(
-        400,
-        'Cannot assign a resolved or rejected issue'
-        );
+    // Re-assigning the same staff member is a no-op: return the
+    // already-populated issue without writing a duplicate history entry.
+    if (issue.assignedTo?._id.toString() === staffId) {
+        return issue;
     }
+
+    const isReassignment = Boolean(issue.assignedTo);
 
     return issueRepository.assignStaff(
         issueId,
         staffId,
-        adminId
+        adminId,
+        isReassignment
+            ? 'Issue reassigned to staff member'
+            : 'Issue assigned to staff member'
     );
     }
 }

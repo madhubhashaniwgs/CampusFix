@@ -20,6 +20,35 @@ class UserRepository {
   async emailExists(email) {
     return User.exists({ email });
   }
+
+  async findActiveStaffById(userId) {
+    return User.findOne({
+      _id: userId,
+      role: 'staff',
+      isActive: true,
+    }).select('fullName email');
+  }
+
+  async incrementTokenVersion(userId) {
+    return User.findByIdAndUpdate(
+      userId,
+      { $inc: { tokenVersion: 1 } },
+      { new: true }
+    );
+  }
+
+  // Updates the password and bumps tokenVersion in one write so all
+  // previously issued sessions are invalidated.
+  async updatePasswordAndBumpVersion(userId, hashedPassword) {
+    return User.findByIdAndUpdate(
+      userId,
+      {
+        password: hashedPassword,
+        $inc: { tokenVersion: 1 },
+      },
+      { new: true }
+    );
+  }
 }
 
 export default new UserRepository();

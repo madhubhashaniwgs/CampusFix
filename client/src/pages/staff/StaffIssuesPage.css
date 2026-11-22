@@ -479,3 +479,40 @@
     width: 100%;
   }
 }
+
+.staff-issues-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.staff-issues-pagination .pagination-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid #ddd6fe;
+  border-radius: 9px;
+  background: white;
+  color: #6d28d9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-issues-pagination .pagination-button:hover:not(:disabled) {
+  background: #ede9fe;
+}
+
+.staff-issues-pagination .pagination-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.staff-issues-pagination .pagination-info {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}

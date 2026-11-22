@@ -7,6 +7,7 @@ import { validateAssignIssue } from '../validators/issueValidator.js';
 import {
   validateCreateIssue,
   validateUpdateStatus,
+  validateIssueListQuery,
 } from '../validators/issueValidator.js';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.post(
 
 router.get(
   '/',
+  validateIssueListQuery,
   issueController.getIssues
 );
 

@@ -14,27 +14,30 @@ import {
 
 const AuthContext = createContext(null);
 
+// Non-sensitive hint that a session may exist. The actual JWT
+// stays in an httpOnly cookie; this flag only prevents a pointless
+// /auth/me call (and its expected 401) for logged-out visitors.
+export const SESSION_HINT_KEY = 'campusfix_has_session';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(
-    () => localStorage.getItem('campusfix_token')
-  );
   const [loading, setLoading] = useState(true);
 
-  // Restore the logged-in user after a page refresh.
+  // Restore the logged-in user after a page refresh. The auth
+  // token lives in an httpOnly cookie, so we simply ask the
+  // backend who the current user is.
   useEffect(() => {
     const restoreSession = async () => {
-      if (!token) {
+      if (!sessionStorage.getItem(SESSION_HINT_KEY)) {
         setLoading(false);
         return;
       }
 
       try {
-        const response = await getCurrentUser(token);
+        const response = await getCurrentUser();
         setUser(response.data);
       } catch (error) {
-        localStorage.removeItem('campusfix_token');
-        setToken(null);
+        sessionStorage.removeItem(SESSION_HINT_KEY);
         setUser(null);
       } finally {
         setLoading(false);
@@ -42,18 +45,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     restoreSession();
-  }, [token]);
-
-  const saveSession = (result) => {
-    localStorage.setItem('campusfix_token', result.token);
-    setToken(result.token);
-    setUser(result.user);
-  };
+  }, []);
 
   const register = async (userData) => {
     const response = await registerUser(userData);
 
-    saveSession(response.data);
+    sessionStorage.setItem(SESSION_HINT_KEY, '1');
+    setUser(response.data.user);
 
     return response;
   };
@@ -61,32 +59,29 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const response = await loginUser(credentials);
 
-    saveSession(response.data);
+    sessionStorage.setItem(SESSION_HINT_KEY, '1');
+    setUser(response.data.user);
 
     return response;
   };
 
- const logout = async () => {
-  try {
-    if (token) {
-      await logoutUser(token);
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      sessionStorage.removeItem(SESSION_HINT_KEY);
+      setUser(null);
     }
-  } catch (error) {
-    console.error('Logout API error:', error);
-  } finally {
-    localStorage.removeItem('campusfix_token');
-    setToken(null);
-    setUser(null);
-  }
-};
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         loading,
-        isAuthenticated: Boolean(user && token),
+        isAuthenticated: Boolean(user),
         register,
         login,
         logout,

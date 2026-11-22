@@ -25,7 +25,7 @@ class AuthService {
       role: 'student',
     });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion ?? 0);
 
     return {
       user: {
@@ -60,7 +60,7 @@ class AuthService {
       throw new ApiError(401, 'Invalid email or password');
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion ?? 0);
 
     return {
       user: {
@@ -85,6 +85,46 @@ class AuthService {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+    };
+  }
+
+  // Increments the user's tokenVersion, which invalidates every
+  // JWT issued before this point (i.e. all sessions for the user).
+  async logout(userId) {
+    await userRepository.incrementTokenVersion(userId);
+  }
+
+  // Verifies the current password, stores the new hash, and bumps
+  // tokenVersion so every other session is invalidated. Returns a
+  // fresh token so the caller's current session stays alive.
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await userRepository.findByIdWithPassword(userId);
+
+    if (!user) {
+      throw new ApiError(401, 'User account not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isValid) {
+      throw new ApiError(401, 'Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    const updated = await userRepository.updatePasswordAndBumpVersion(
+      userId,
+      hashedPassword
+    );
+
+    return {
+      user: {
+        id: updated._id,
+        fullName: updated.fullName,
+        email: updated.email,
+        role: updated.role,
+      },
+      token: generateToken(updated._id, updated.tokenVersion ?? 0),
     };
   }
 }

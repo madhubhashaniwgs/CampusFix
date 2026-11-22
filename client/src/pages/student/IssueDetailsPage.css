@@ -350,3 +350,47 @@
     flex-direction: column;
   }
 }
+
+.details-photo-link {
+  display: block;
+  margin: 4px 0 18px;
+}
+
+.details-photo {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e5d8ff;
+  cursor: zoom-in;
+}
+
+.ticket-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid #e5d8ff;
+  border-radius: 8px;
+  background: #f5f0ff;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ticket-copy-button:hover {
+  background: #ede5ff;
+  border-color: #cdb7f8;
+}
+
+.ticket-copy-button .details-ticket-id {
+  font-size: 13px;
+}
+
+.ticket-copy-button svg {
+  color: #8b5cf6;
+}
+
+.ticket-copy-button .copy-check {
+  color: #059669;
+}
