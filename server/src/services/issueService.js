@@ -6,27 +6,51 @@ import ApiError from '../utils/ApiError.js';
 
 class IssueService {
   async createIssue(issueData, userId) {
-    const ticketId = `CF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    const maxAttempts = 3;
 
-    const issue = await issueRepository.create({
-    title: issueData.title,
-    description: issueData.description,
-    category: issueData.category,
-    location: issueData.location,
-    priority: issueData.priority || 'medium',
-    ticketId,
-    reportedBy: userId,
-    status: 'reported',
-    statusHistory: [
-        {
-        status: 'reported',
-        updatedBy: userId,
-        note: 'Issue reported',
-        },
-    ],
-    });
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const ticketId = `CF-${randomBytes(4).toString('hex').toUpperCase()}`;
 
-    return issueRepository.findById(issue._id);
+      try {
+        const issue = await issueRepository.create({
+          title: issueData.title,
+          description: issueData.description,
+          category: issueData.category,
+          location: issueData.location,
+          priority: issueData.priority || 'medium',
+          ticketId,
+          reportedBy: userId,
+          status: 'reported',
+          statusHistory: [
+            {
+              status: 'reported',
+              updatedBy: userId,
+              note: 'Issue reported',
+            },
+          ],
+        });
+
+        return issueRepository.findById(issue._id);
+      } catch (error) {
+        const isTicketIdConflict =
+          error.code === 11000 &&
+          error.keyPattern &&
+          Object.prototype.hasOwnProperty.call(
+            error.keyPattern,
+            'ticketId'
+          );
+
+        if (!isTicketIdConflict || attempt === maxAttempts - 1) {
+          if (isTicketIdConflict) {
+            throw new ApiError(
+              500,
+              'Unable to generate a unique ticket ID. Please try again.'
+            );
+          }
+          throw error;
+        }
+      }
+    }
   }
 
   async getIssues(user) {

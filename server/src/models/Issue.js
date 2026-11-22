@@ -103,6 +103,13 @@ const issueSchema = new mongoose.Schema(
   }
 );
 
+// Indexes matching the actual query patterns in issueRepository.findAll:
+// students filter by reportedBy, staff by assignedTo, and all listings
+// sort by createdAt descending. Detail lookups use the default _id index.
+issueSchema.index({ reportedBy: 1, createdAt: -1 });
+issueSchema.index({ assignedTo: 1, createdAt: -1 });
+issueSchema.index({ createdAt: -1 });
+
 const Issue = mongoose.model('Issue', issueSchema);
 
 export default Issue;
