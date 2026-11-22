@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ImagePlus, X } from 'lucide-react';
 import { createIssue } from '../../services/issueService';
 import './ReportIssuePage.css';
 
@@ -16,9 +17,48 @@ function ReportIssuePage() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState(initialFormData);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const fileInputRef = useRef(null);
+
+  // Compress the selected image client-side (max 1200px, JPEG)
+  // so uploads stay small enough for the JSON API.
+  const handlePhotoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1200;
+        const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        setPhoto(dataUrl);
+        setPhotoPreview(dataUrl);
+        setError('');
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoPreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -33,18 +73,15 @@ function ReportIssuePage() {
     event.preventDefault();
 
     setError('');
-    setSuccess('');
 
     try {
       setLoading(true);
 
-      const response = await createIssue(formData);
-
-      setSuccess(
-        `${response.message} Ticket ID: ${response.data.ticketId}`
-      );
+      await createIssue({ ...formData, photo });
 
       setFormData(initialFormData);
+      removePhoto();
+      navigate('/student/my-issues', { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -71,12 +108,6 @@ function ReportIssuePage() {
           {error && (
             <div className="report-alert report-error">
               {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="report-alert report-success">
-              {success}
             </div>
           )}
 
@@ -157,6 +188,41 @@ function ReportIssuePage() {
               onChange={handleChange}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label>Photo (optional)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoChange}
+              hidden
+            />
+
+            {photoPreview ? (
+              <div className="photo-preview">
+                <img src={photoPreview} alt="Issue preview" />
+                <button
+                  type="button"
+                  className="photo-remove"
+                  onClick={removePhoto}
+                  aria-label="Remove photo"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="photo-upload"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImagePlus size={18} />
+                Add a photo
+              </button>
+            )}
           </div>
 
           <div className="report-actions">

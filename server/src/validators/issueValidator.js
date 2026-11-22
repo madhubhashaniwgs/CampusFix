@@ -34,7 +34,8 @@ const MAX_SEARCH_LENGTH = 100;
 const MAX_LIMIT = 100;
 
 export const validateCreateIssue = (req, res, next) => {
-  const { title, description, category, location, priority } = req.body;
+  const { title, description, category, location, priority, photo } =
+    req.body;
 
   const errors = [];
 
@@ -64,6 +65,19 @@ export const validateCreateIssue = (req, res, next) => {
 
   if (priority && !validPriorities.includes(priority)) {
     errors.push('Please select a valid priority');
+  }
+
+  // Optional photo: must be a JPEG/PNG/WebP data URL within a
+  // bounded size to keep documents small.
+  const MAX_PHOTO_LENGTH = 1_500_000;
+  if (photo !== undefined && photo !== null && photo !== '') {
+    if (
+      typeof photo !== 'string' ||
+      !photo.startsWith('data:image/') ||
+      photo.length > MAX_PHOTO_LENGTH
+    ) {
+      errors.push('Photo must be a valid image under 1.5MB');
+    }
   }
 
   if (errors.length > 0) {

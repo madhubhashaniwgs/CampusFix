@@ -19,6 +19,7 @@ class IssueService {
           category: issueData.category,
           location: issueData.location,
           priority: issueData.priority || 'medium',
+          photo: issueData.photo || null,
           ticketId,
           reportedBy: userId,
           status: 'reported',

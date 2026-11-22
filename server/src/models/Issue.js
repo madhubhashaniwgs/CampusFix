@@ -47,6 +47,13 @@ const issueSchema = new mongoose.Schema(
       default: 'medium',
     },
 
+    // Optional photo attached to the report, stored as a
+    // compressed JPEG data URL (validated to a bounded size).
+    photo: {
+      type: String,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: [

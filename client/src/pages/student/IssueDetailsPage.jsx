@@ -136,6 +136,21 @@ function IssueDetailsPage() {
 
           <p className="details-description">{issue.description}</p>
 
+          {issue.photo && (
+            <a
+              href={issue.photo}
+              target="_blank"
+              rel="noreferrer"
+              className="details-photo-link"
+            >
+              <img
+                src={issue.photo}
+                alt="Issue attachment"
+                className="details-photo"
+              />
+            </a>
+          )}
+
           <div className="details-info-grid">
             <div className="details-info-item">
               <span>Category</span>
