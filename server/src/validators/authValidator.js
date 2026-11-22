@@ -20,8 +20,8 @@ const COMMON_PASSWORDS = new Set([
 const validatePasswordPolicy = (password) => {
   const errors = [];
 
-  if (password.length < 10) {
-    errors.push('Password must contain at least 10 characters');
+  if (password.length < 6) {
+    errors.push('Password must contain at least 6 characters');
   }
 
   if (!/[a-z]/.test(password)) {

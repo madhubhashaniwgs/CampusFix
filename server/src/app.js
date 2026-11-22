@@ -25,11 +25,14 @@ app.use(helmet());
 // In development all origins are allowed for local convenience.
 // In production only the origins listed in CLIENT_ORIGINS may connect.
 app.use(
-  cors(
-    isProduction
-      ? { origin: allowedOrigins, credentials: true }
-      : { credentials: true }
-  )
+  cors({
+    // Development: reflect the request origin so credentialed
+    // requests from the Vite dev server are allowed. A wildcard
+    // origin is invalid together with credentials.
+    // Production: only CLIENT_ORIGINS entries are allowed.
+    origin: isProduction ? allowedOrigins : true,
+    credentials: true,
+  })
 );
 app.use(cookieParser());
 app.use(csrfProtection);

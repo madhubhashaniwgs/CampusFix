@@ -38,7 +38,12 @@ export const getCsrfToken = () => csrfToken;
 
 apiClient.interceptors.request.use(
   async (config) => {
-    if (!csrfToken) {
+    // The CSRF bootstrap endpoint must not trigger token fetch itself,
+    // otherwise every request recursively spawns another /auth/csrf call.
+    const isCsrfBootstrap =
+      typeof config.url === 'string' && config.url.includes('/auth/csrf');
+
+    if (!csrfToken && !isCsrfBootstrap) {
       await refreshCsrfToken();
     }
 
@@ -77,6 +82,7 @@ apiClient.interceptors.response.use(
 
     if (status === 401 && !isAuthRequest) {
       localStorage.removeItem('campusfix_token');
+      sessionStorage.removeItem('campusfix_has_session');
 
       const path = window.location.pathname;
       const onAuthPage =

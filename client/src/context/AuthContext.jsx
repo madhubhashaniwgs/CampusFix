@@ -14,6 +14,11 @@ import {
 
 const AuthContext = createContext(null);
 
+// Non-sensitive hint that a session may exist. The actual JWT
+// stays in an httpOnly cookie; this flag only prevents a pointless
+// /auth/me call (and its expected 401) for logged-out visitors.
+export const SESSION_HINT_KEY = 'campusfix_has_session';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,10 +28,16 @@ export const AuthProvider = ({ children }) => {
   // backend who the current user is.
   useEffect(() => {
     const restoreSession = async () => {
+      if (!sessionStorage.getItem(SESSION_HINT_KEY)) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await getCurrentUser();
         setUser(response.data);
       } catch (error) {
+        sessionStorage.removeItem(SESSION_HINT_KEY);
         setUser(null);
       } finally {
         setLoading(false);
@@ -39,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     const response = await registerUser(userData);
 
+    sessionStorage.setItem(SESSION_HINT_KEY, '1');
     setUser(response.data.user);
 
     return response;
@@ -47,6 +59,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const response = await loginUser(credentials);
 
+    sessionStorage.setItem(SESSION_HINT_KEY, '1');
     setUser(response.data.user);
 
     return response;
@@ -58,6 +71,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
+      sessionStorage.removeItem(SESSION_HINT_KEY);
       setUser(null);
     }
   };

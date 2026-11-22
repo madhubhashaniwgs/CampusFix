@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserRound, Mail, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { UserRound, Mail, LockKeyhole, ShieldCheck, Eye, EyeOff, TicketCheck, Users, BarChart3 } from 'lucide-react';
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -16,6 +16,8 @@ function RegisterPage() {
 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
     setFormData({
@@ -33,8 +35,8 @@ function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must contain at least 8 characters.');
+    if (formData.password.length < 6) {
+      setError('Password must contain at least 6 characters.');
       return;
     }
 
@@ -58,14 +60,45 @@ function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <Link to="/" className="brand">
-          <div className="brand-icon">
-            <ShieldCheck size={25} />
+      <div className="auth-layout">
+        <aside className="auth-showcase">
+          <div className="auth-showcase-brand">
+            <div className="brand-icon">
+              <ShieldCheck size={22} />
+            </div>
+            <span>CampusFix</span>
           </div>
-          <span>CampusFix</span>
-        </Link>
 
+          <div>
+            <h2>Join CampusFix today</h2>
+            <p>
+              Report campus issues in seconds and watch them move from
+              reported to resolved — all in one place.
+            </p>
+
+            <div className="auth-showcase-features">
+              <div className="auth-showcase-feature">
+                <TicketCheck size={18} />
+                Track every issue with a unique ticket ID
+              </div>
+              <div className="auth-showcase-feature">
+                <Users size={18} />
+                Direct routing to the right staff member
+              </div>
+              <div className="auth-showcase-feature">
+                <BarChart3 size={18} />
+                Live status updates from report to resolution
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-showcase-footer">
+            Campus issue management, simplified.
+          </div>
+        </aside>
+
+        <div className="auth-form-panel">
+          <div className="auth-card">
         <div className="auth-heading">
           <h1>Create an account</h1>
           <p>Join CampusFix and help improve your campus.</p>
@@ -82,6 +115,7 @@ function RegisterPage() {
                 id="fullName"
                 type="text"
                 name="fullName"
+                autoComplete="name"
                 placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={handleChange}
@@ -98,6 +132,7 @@ function RegisterPage() {
                 id="email"
                 type="email"
                 name="email"
+                autoComplete="email"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleChange}
@@ -112,15 +147,30 @@ function RegisterPage() {
               <LockKeyhole size={19} />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="password"
+                autoComplete="new-password"
                 placeholder="Create a password"
                 value={formData.password}
                 onChange={handleChange}
-                minLength={8}
+                minLength={6}
                 required
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'Hide password' : 'Show password'
+                }
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+            <small className="form-hint">
+              At least 6 characters with uppercase, lowercase and a
+              number.
+            </small>
           </div>
 
           <div className="form-group">
@@ -129,13 +179,32 @@ function RegisterPage() {
               <LockKeyhole size={19} />
               <input
                 id="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 name="confirmPassword"
+                autoComplete="new-password"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() =>
+                  setShowConfirmPassword((prev) => !prev)
+                }
+                aria-label={
+                  showConfirmPassword
+                    ? 'Hide password'
+                    : 'Show password'
+                }
+              >
+                {showConfirmPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
+              </button>
             </div>
           </div>
 
@@ -152,6 +221,8 @@ function RegisterPage() {
           Already have an account?{' '}
           <Link to="/login">Sign in</Link>
         </p>
+          </div>
+        </div>
       </div>
     </div>
   );

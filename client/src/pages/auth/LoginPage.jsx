@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { LockKeyhole, Mail, ShieldCheck, Eye, EyeOff, TicketCheck, Users, BarChart3 } from 'lucide-react';
 
 const getDashboardPath = (role) => {
   const paths = {
@@ -24,6 +24,7 @@ function LoginPage() {
 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     setFormData({
@@ -56,14 +57,45 @@ function LoginPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <Link to="/" className="brand">
-          <div className="brand-icon">
-            <ShieldCheck size={25} />
+      <div className="auth-layout">
+        <aside className="auth-showcase">
+          <div className="auth-showcase-brand">
+            <div className="brand-icon">
+              <ShieldCheck size={22} />
+            </div>
+            <span>CampusFix</span>
           </div>
-          <span>CampusFix</span>
-        </Link>
 
+          <div>
+            <h2>Report. Track. Resolve.</h2>
+            <p>
+              CampusFix connects students, staff, and admins so every
+              campus issue gets the attention it deserves.
+            </p>
+
+            <div className="auth-showcase-features">
+              <div className="auth-showcase-feature">
+                <TicketCheck size={18} />
+                Track every issue with a unique ticket ID
+              </div>
+              <div className="auth-showcase-feature">
+                <Users size={18} />
+                Direct routing to the right staff member
+              </div>
+              <div className="auth-showcase-feature">
+                <BarChart3 size={18} />
+                Live status updates from report to resolution
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-showcase-footer">
+            Campus issue management, simplified.
+          </div>
+        </aside>
+
+        <div className="auth-form-panel">
+          <div className="auth-card">
         <div className="auth-heading">
           <h1>Welcome back!</h1>
           <p>Sign in to continue to your CampusFix account.</p>
@@ -81,6 +113,7 @@ function LoginPage() {
                 id="email"
                 type="email"
                 name="email"
+                autoComplete="email"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleChange}
@@ -96,13 +129,24 @@ function LoginPage() {
               <LockKeyhole size={19} />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="password"
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleChange}
                 required
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'Hide password' : 'Show password'
+                }
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -119,6 +163,8 @@ function LoginPage() {
           Don't have an account?{' '}
           <Link to="/register">Create an account</Link>
         </p>
+          </div>
+        </div>
       </div>
     </div>
   );

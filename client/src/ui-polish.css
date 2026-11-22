@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', Arial, sans-serif;
+  background-color: #F5F3FF;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #ede9fe;
+  color: #4c1d95;
+}
+
+/* Slim, theme-tinted scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d8ccf5;
+  border-radius: 8px;
+  border: 2px solid #f5f3ff;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c4b0ee;
+}
+
+/* Consistent keyboard-focus ring across the app */
+:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Smooth, subtle interaction feedback */
+button,
+a,
+[role='button'],
+summary {
+  transition-property: background-color, border-color, color, box-shadow,
+    transform, opacity;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
+}
+
+button:not(:disabled):active,
+[role='button']:not([aria-disabled='true']):active {
+  transform: scale(0.98);
+}
+
+/* Nicer disabled state everywhere */
+button:disabled,
+[disabled] {
+  cursor: not-allowed;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
