@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/authMiddleware.js';
 import {
   validateRegister,
   validateLogin,
+  validateChangePassword,
 } from '../validators/authValidator.js';
 import {
   loginRateLimiter,
@@ -30,6 +31,13 @@ router.post(
 router.get('/me', authenticate, authController.getMe);
 
 router.get('/csrf', authController.getCsrfToken);
+
+router.post(
+  '/change-password',
+  authenticate,
+  validateChangePassword,
+  authController.changePassword
+);
 
 router.post('/logout', authenticate, authController.logout);
 

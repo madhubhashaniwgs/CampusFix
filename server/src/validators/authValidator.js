@@ -85,6 +85,27 @@ export const validateCreateStaff = (req, res, next) => {
   next();
 };
 
+export const validateChangePassword = (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  const errors = [];
+
+  if (!currentPassword || typeof currentPassword !== 'string') {
+    errors.push('Current password is required');
+  }
+
+  if (!newPassword || typeof newPassword !== 'string') {
+    errors.push('New password is required');
+  } else {
+    errors.push(...validatePasswordPolicy(newPassword));
+  }
+
+  if (errors.length > 0) {
+    return next(new ApiError(400, 'Validation failed', errors));
+  }
+
+  next();
+};
+
 export const validateLogin = (req, res, next) => {
   const { email, password } = req.body;
 

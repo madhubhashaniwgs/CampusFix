@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 * {
@@ -7,88 +7,73 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', Arial, sans-serif;
-  background-color: #F5F3FF;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f9f7fd;
+  color: #1e1338;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-::selection {
-  background: #ede9fe;
-  color: #4c1d95;
+/* Delicate Light Purple Ambient Mesh Background */
+.ambient-purple-bg {
+  background-color: #f9f7fd;
+  background-image:
+    radial-gradient(at 10% 12%, rgba(168, 85, 247, 0.06) 0px, transparent 40%),
+    radial-gradient(at 90% 10%, rgba(139, 92, 246, 0.06) 0px, transparent 45%),
+    radial-gradient(at 50% 50%, rgba(216, 180, 254, 0.08) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(192, 132, 252, 0.05) 0px, transparent 45%),
+    radial-gradient(at 85% 85%, rgba(124, 58, 237, 0.05) 0px, transparent 45%);
+  background-attachment: fixed;
 }
 
-/* Slim, theme-tinted scrollbar */
+/* Tinted Purple Frosted Glass Card */
+.purple-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(216, 180, 254, 0.45);
+  box-shadow: 0 10px 28px -8px rgba(109, 40, 217, 0.06), 0 2px 6px rgba(109, 40, 217, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.purple-card:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 16px 36px -10px rgba(109, 40, 217, 0.12), 0 4px 12px rgba(109, 40, 217, 0.04);
+}
+
+/* Purple selection */
+::selection {
+  background: #ddd6fe;
+  color: #3b0764;
+}
+
+/* Theme Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f9f7fd;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d8ccf5;
+  background: #d8ccee;
   border-radius: 8px;
-  border: 2px solid #f5f3ff;
+  border: 2px solid #f9f7fd;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c4b0ee;
+  background: #c4b5fd;
 }
 
-/* Consistent keyboard-focus ring across the app */
 :focus-visible {
-  outline: 2px solid #8b5cf6;
+  outline: 2px solid #7c3aed;
   outline-offset: 2px;
-  border-radius: 4px;
-}
-
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: none;
-}
-
-/* Smooth, subtle interaction feedback */
-button,
-a,
-[role='button'],
-summary {
-  transition-property: background-color, border-color, color, box-shadow,
-    transform, opacity;
-  transition-duration: 0.18s;
-  transition-timing-function: ease;
-}
-
-button:not(:disabled):active,
-[role='button']:not([aria-disabled='true']):active {
-  transform: scale(0.98);
-}
-
-/* Nicer disabled state everywhere */
-button:disabled,
-[disabled] {
-  cursor: not-allowed;
-}
-
-/* Respect users who prefer reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }

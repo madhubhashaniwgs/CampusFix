@@ -1,56 +1,55 @@
-
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
-  ClipboardList,
-  Plus,
-  RefreshCw,
-  MapPin,
-  CalendarDays,
   Search,
+  RefreshCw,
+  PlusCircle,
+  LayoutGrid,
+  List,
   ChevronLeft,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
+import AppLayout from '../../components/layouts/AppLayout';
+import IssueCard from '../../components/issues/IssueCard';
+import IssuePhoto from '../../components/common/IssuePhoto';
+import StatusBadge from '../../components/common/StatusBadge';
+import PriorityBadge from '../../components/common/PriorityBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
+import ImageModal from '../../components/common/ImageModal';
+import EmptyState from '../../components/common/EmptyState';
 import { getIssues, getIssueCount } from '../../services/issueService';
-import './MyIssuesPage.css';
 
 const PAGE_SIZE = 10;
 
-const statusLabels = {
-  reported: 'Reported',
-  assigned: 'Assigned',
-  in_progress: 'In Progress',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
-};
-
-const priorityLabels = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  urgent: 'Urgent',
-};
-
-const statusTabs = [
-  ['all', 'All'],
-  ['reported', 'Reported'],
-  ['assigned', 'Assigned'],
-  ['in_progress', 'In Progress'],
-  ['resolved', 'Resolved'],
-  ['rejected', 'Rejected'],
+const STATUS_TABS = [
+  { value: 'all', label: 'All Issues' },
+  { value: 'reported', label: 'Reported' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'rejected', label: 'Rejected' },
 ];
 
-function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+const CATEGORIES = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'it', label: 'IT & Equipment' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'other', label: 'General / Facility' },
+];
 
-function MyIssuesPage() {
+const PRIORITIES = [
+  { value: 'all', label: 'All Priorities' },
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
+
+export default function MyIssuesPage() {
   const navigate = useNavigate();
 
   const [issues, setIssues] = useState([]);
@@ -60,321 +59,395 @@ function MyIssuesPage() {
     totalItems: 0,
     pageSize: PAGE_SIZE,
   });
-  const [statusCounts, setStatusCounts] = useState({
-    all: 0,
-    reported: 0,
-    assigned: 0,
-    in_progress: 0,
-    resolved: 0,
-    rejected: 0,
-  });
+  const [statusCounts, setStatusCounts] = useState({});
   const [filter, setFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [activePhoto, setActivePhoto] = useState({ isOpen: false, src: '', title: '' });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchCounts = useCallback(async () => {
-    const statuses = statusTabs.map(([value]) => value);
-
-    const counts = await Promise.all(
-      statuses.map((value) =>
-        value === 'all'
-          ? getIssueCount()
-          : getIssueCount({ status: value })
-      )
-    );
-
-    setStatusCounts(
-      Object.fromEntries(statuses.map((value, i) => [value, counts[i]]))
-    );
+    try {
+      const counts = await Promise.all(
+        STATUS_TABS.map((t) =>
+          t.value === 'all'
+            ? getIssueCount()
+            : getIssueCount({ status: t.value })
+        )
+      );
+      const map = {};
+      STATUS_TABS.forEach((t, i) => {
+        map[t.value] = counts[i];
+      });
+      setStatusCounts(map);
+    } catch {
+      // Ignore
+    }
   }, []);
 
   const fetchIssues = useCallback(
     async (targetPage = page) => {
       try {
         setLoading(true);
-        setError('');
-
         const params = { page: targetPage, limit: PAGE_SIZE };
-
         if (filter !== 'all') params.status = filter;
+        if (categoryFilter !== 'all') params.category = categoryFilter;
+        if (priorityFilter !== 'all') params.priority = priorityFilter;
         if (debouncedSearch) params.search = debouncedSearch;
 
-        const response = await getIssues(params);
-
-        setIssues(response.data || []);
+        const res = await getIssues(params);
+        setIssues(res.data || []);
         setPagination(
-          response.pagination || {
+          res.pagination || {
             currentPage: targetPage,
             totalPages: 1,
             totalItems: 0,
             pageSize: PAGE_SIZE,
           }
         );
-      } catch (err) {
-        setError(
-          err.response?.data?.message ||
-          'Unable to load your issues. Please try again.'
-        );
+      } catch {
+        setIssues([]);
       } finally {
         setLoading(false);
       }
     },
-    [page, filter, debouncedSearch]
+    [filter, categoryFilter, priorityFilter, debouncedSearch, page]
   );
 
-  const refreshAll = useCallback(async () => {
-    await Promise.all([fetchCounts(), fetchIssues(page)]);
-  }, [fetchCounts, fetchIssues, page]);
-
   useEffect(() => {
-    refreshAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm.trim());
-      setPage(1);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    fetchCounts();
+  }, [fetchCounts]);
 
   useEffect(() => {
     fetchIssues(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filter, debouncedSearch]);
+  }, [fetchIssues, page]);
 
-  const handleFilterChange = (value) => {
-    setFilter(value);
+  const resetFilters = () => {
+    setFilter('all');
+    setCategoryFilter('all');
+    setPriorityFilter('all');
+    setSearchTerm('');
     setPage(1);
   };
 
+  const hasActiveFilters =
+    filter !== 'all' ||
+    categoryFilter !== 'all' ||
+    priorityFilter !== 'all' ||
+    debouncedSearch !== '';
+
   return (
-    <div className="my-issues-page">
-      <header className="issues-topbar">
-        <button
-          className="back-button"
-          onClick={() => navigate('/student/dashboard')}
-        >
-          <ArrowLeft size={18} />
-          Dashboard
-        </button>
+    <AppLayout activeNav="issues">
+      <ImageModal
+        isOpen={activePhoto.isOpen}
+        src={activePhoto.src}
+        title={activePhoto.title}
+        onClose={() => setActivePhoto({ isOpen: false, src: '', title: '' })}
+      />
 
-        <span className="issues-brand">CampusFix</span>
-      </header>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-purple-950 tracking-tight">
+            My Maintenance Tickets
+          </h1>
+          <p className="text-sm text-purple-900/70 mt-1">
+            Track status updates, technician notes, and historical campus reports.
+          </p>
+        </div>
 
-      <main className="my-issues-container">
-        <section className="my-issues-heading">
-          <div>
-            <span className="issues-eyebrow">STUDENT PORTAL</span>
-            <h1>My Issues</h1>
-            <p>Track and manage the issues you have reported.</p>
-          </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              fetchCounts();
+              fetchIssues(page);
+            }}
+            className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-800 transition-colors"
+            title="Refresh list"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
+          </button>
 
           <button
-            className="new-issue-button"
             onClick={() => navigate('/student/report-issue')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-purple-600/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Plus size={18} />
-            Report New Issue
+            <PlusCircle className="w-4 h-4" />
+            Report Issue
           </button>
-        </section>
+        </div>
+      </div>
 
-        <section className="issues-summary">
-          <div className="summary-card">
-            <span>Total Issues</span>
-            <strong>{statusCounts.all}</strong>
-          </div>
+      {/* Filter & Search Bar (Purple Card) */}
+      <div className="purple-card rounded-3xl p-4 sm:p-5 mb-6 space-y-4">
+        {/* Status Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {STATUS_TABS.map((tab) => {
+            const isActive = filter === tab.value;
+            const count = statusCounts[tab.value];
+            return (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setFilter(tab.value);
+                  setPage(1);
+                }}
+                className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-purple-700 text-white shadow-sm shadow-purple-700/25'
+                    : 'bg-purple-100/70 hover:bg-purple-200 text-purple-900'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {count !== undefined && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-purple-200 text-purple-900'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-          <div className="summary-card">
-            <span>Reported</span>
-            <strong>{statusCounts.reported}</strong>
-          </div>
-
-          <div className="summary-card">
-            <span>In Progress</span>
-            <strong>{statusCounts.in_progress}</strong>
-          </div>
-
-          <div className="summary-card">
-            <span>Resolved</span>
-            <strong>{statusCounts.resolved}</strong>
-          </div>
-        </section>
-
-        <section className="issues-list-section">
-          <div className="issues-list-heading">
-            <div>
-              <h2>Reported Issues</h2>
-              <p>{pagination.totalItems} issue(s) found</p>
-            </div>
-
-            <button
-              className="refresh-button"
-              onClick={refreshAll}
-              disabled={loading}
-              title="Refresh issues"
-            >
-              <RefreshCw size={17} />
-              Refresh
-            </button>
-          </div>
-
-          <div className="my-issues-search">
-            <Search size={17} />
+        {/* Search & Dropdown Filters Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-purple-100">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
             <input
               type="text"
-              placeholder="Search by ticket ID, title or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by title, location or ticket ID..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-medium text-purple-950 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none transition-all placeholder:text-purple-400"
             />
-          </div>
-
-          <div className="issue-filters">
-            {statusTabs.map(([value, label]) => (
+            {searchTerm && (
               <button
-                key={value}
-                className={`filter-button ${filter === value ? 'active' : ''}`}
-                onClick={() => handleFilterChange(value)}
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-700 p-0.5"
               >
-                {label}
-                <span>{statusCounts[value]}</span>
+                <X className="w-3.5 h-3.5" />
               </button>
-            ))}
+            )}
           </div>
 
-          {loading ? (
-            <div className="issues-message">
-              <RefreshCw className="loading-icon" size={24} />
-              <p>Loading your issues...</p>
-            </div>
-          ) : error ? (
-            <div className="issues-message error-message">
-              <p>{error}</p>
-              <button onClick={refreshAll}>Try Again</button>
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="issues-empty-state">
-              <div className="empty-icon">
-                <ClipboardList size={30} />
-              </div>
-              <h3>No issues found</h3>
-              <p>
-                {filter === 'all' && !debouncedSearch
-                  ? "You haven't reported any issues yet."
-                  : 'No issues match your current search or filters.'}
-              </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-900 outline-none focus:border-purple-600"
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
 
-              {filter === 'all' && !debouncedSearch && (
-                <button
-                  className="new-issue-button"
-                  onClick={() => navigate('/student/report-issue')}
-                >
-                  <Plus size={18} />
-                  Report Your First Issue
-                </button>
-              )}
+            <select
+              value={priorityFilter}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-900 outline-none focus:border-purple-600"
+            >
+              {PRIORITIES.map((pri) => (
+                <option key={pri.value} value={pri.value}>
+                  {pri.label}
+                </option>
+              ))}
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-purple-100/90 p-1 rounded-xl border border-purple-200 ml-auto sm:ml-0">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-purple-700 hover:text-purple-950'
+                }`}
+                title="Grid Cards View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-purple-700 hover:text-purple-950'
+                }`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            <div className="issues-grid">
-              {issues.map((issue) => (
-                <article
-                    className="issue-card"
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="py-20 text-center">
+          <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-purple-900/70 font-semibold">Loading tickets...</p>
+        </div>
+      ) : issues.length === 0 ? (
+        <EmptyState
+          title={hasActiveFilters ? 'No matching tickets found' : 'No tickets reported yet'}
+          description={
+            hasActiveFilters
+              ? 'Try adjusting your search terms or filters to find what you are looking for.'
+              : 'When you report a facility problem on campus, it will appear here.'
+          }
+          actionLabel={hasActiveFilters ? 'Clear All Filters' : 'Report an Issue'}
+          onAction={hasActiveFilters ? resetFilters : () => navigate('/student/report-issue')}
+        />
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {issues.map((issue) => (
+            <IssueCard
+              key={issue._id}
+              issue={issue}
+              onClick={() => navigate(`/student/issues/${issue._id}`)}
+              onPhotoClick={(src, title) => setActivePhoto({ isOpen: true, src, title })}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="purple-card rounded-3xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-purple-200 text-purple-950 font-bold uppercase tracking-wider bg-purple-100/80">
+                  <th className="py-3.5 px-4">Ticket</th>
+                  <th className="py-3.5 px-4">Title & Description</th>
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">Location</th>
+                  <th className="py-3.5 px-4">Priority</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Assigned To</th>
+                  <th className="py-3.5 px-4 text-right">Reported</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-purple-100 bg-white/70">
+                {issues.map((issue) => (
+                  <tr
                     key={issue._id}
                     onClick={() => navigate(`/student/issues/${issue._id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                        navigate(`/student/issues/${issue._id}`);
-                        }
-                    }}
-                >
-                  <div className="issue-card-top">
-                    <span className="ticket-id">{issue.ticketId}</span>
-
-                    <span className={`status-badge status-${issue.status}`}>
-                      {statusLabels[issue.status] || issue.status}
-                    </span>
-                  </div>
-
-                  <h3>{issue.title}</h3>
-
-                  <p className="issue-description">
-                    {issue.description}
-                  </p>
-
-                  <div className="issue-meta">
-                    <span>
-                      <MapPin size={15} />
+                    className="hover:bg-purple-100/60 cursor-pointer transition-colors group"
+                  >
+                    <td className="py-3 px-4 font-mono font-black text-purple-800 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <IssuePhoto
+                          src={issue.photo}
+                          alt={issue.title}
+                          category={issue.category}
+                          variant="thumbnail"
+                        />
+                        <span>{issue.ticketId}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 max-w-xs">
+                      <p className="font-bold text-purple-950 group-hover:text-purple-700 transition-colors truncate">
+                        {issue.title}
+                      </p>
+                      <p className="text-[11px] text-purple-900/70 truncate">{issue.description}</p>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <CategoryBadge category={issue.category} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 text-purple-950 font-medium max-w-[150px] truncate whitespace-nowrap">
                       {issue.location}
-                    </span>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <PriorityBadge priority={issue.priority} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <StatusBadge status={issue.status} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 text-purple-900/80 font-medium whitespace-nowrap">
+                      {issue.assignedTo?.fullName || (
+                        <span className="text-purple-400 italic">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right text-purple-800 font-medium whitespace-nowrap">
+                      {new Date(issue.createdAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                    <span>
-                      <CalendarDays size={15} />
-                      {formatDate(issue.createdAt)}
-                    </span>
-                  </div>
+      {/* Pagination Bar */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between border-t border-purple-200 pt-4 px-2">
+          <p className="text-xs text-purple-900/70 font-medium">
+            Showing <strong className="text-purple-950">{(page - 1) * PAGE_SIZE + 1}</strong> to{' '}
+            <strong className="text-purple-950">
+              {Math.min(page * PAGE_SIZE, pagination.totalItems)}
+            </strong>{' '}
+            of <strong className="text-purple-950">{pagination.totalItems}</strong> tickets
+          </p>
 
-                  <div className="issue-card-bottom">
-                    <span className="issue-category">
-                      {issue.category.replace('_', ' ')}
-                    </span>
-
-                    <span className={`priority-badge priority-${issue.priority}`}>
-                      {priorityLabels[issue.priority] || issue.priority} Priority
-                    </span>
-                  </div>
-
-                  <button
-                    className="view-details-button"
-                    onClick={() => navigate(`/student/issues/${issue._id}`)}
-                    >
-                    View Details →
-                  </button>
-
-                </article>
-              ))}
-            </div>
-          )}
-
-          {!loading && pagination.totalPages > 1 && (
-            <div className="my-issues-pagination">
-              <button
-                className="pagination-button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={pagination.currentPage <= 1}
-              >
-                <ChevronLeft size={16} />
-                Previous
-              </button>
-
-              <span className="pagination-info">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-
-              <button
-                className="pagination-button"
-                onClick={() =>
-                  setPage((p) =>
-                    Math.min(pagination.totalPages, p + 1)
-                  )
-                }
-                disabled={pagination.currentPage >= pagination.totalPages}
-              >
-                Next
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-purple-200 bg-white/80 text-xs font-bold text-purple-800 hover:bg-purple-100 disabled:opacity-40 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+            <span className="text-xs font-black text-purple-950 px-2 font-mono">
+              {page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+              disabled={page >= pagination.totalPages}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-purple-200 bg-white/80 text-xs font-bold text-purple-800 hover:bg-purple-100 disabled:opacity-40 transition-colors"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </AppLayout>
   );
 }
-
-export default MyIssuesPage;

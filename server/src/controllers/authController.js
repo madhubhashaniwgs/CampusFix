@@ -73,6 +73,28 @@ class AuthController {
     );
   };
 
+  changePassword = async (req, res, next) => {
+    try {
+      const result = await authService.changePassword(
+        req.user.id,
+        req.body.currentPassword,
+        req.body.newPassword
+      );
+
+      // Issue a fresh token so the current session survives the
+      // tokenVersion bump; all other sessions are now invalid.
+      setAuthCookie(res, result.token);
+
+      res.status(200).json(
+        new ApiResponse(200, 'Password changed successfully', {
+          user: result.user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
   logout = async (req, res, next) => {
     try {
       // Invalidates all JWTs issued for this user so a copied

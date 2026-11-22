@@ -21,3 +21,11 @@ export const logoutUser = async () => {
   const response = await apiClient.post('/auth/logout');
   return response.data;
 };
+
+export const changePassword = async (passwords) => {
+  const response = await apiClient.post(
+    '/auth/change-password',
+    passwords
+  );
+  return response.data;
+};

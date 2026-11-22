@@ -93,6 +93,40 @@ class AuthService {
   async logout(userId) {
     await userRepository.incrementTokenVersion(userId);
   }
+
+  // Verifies the current password, stores the new hash, and bumps
+  // tokenVersion so every other session is invalidated. Returns a
+  // fresh token so the caller's current session stays alive.
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await userRepository.findByIdWithPassword(userId);
+
+    if (!user) {
+      throw new ApiError(401, 'User account not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isValid) {
+      throw new ApiError(401, 'Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    const updated = await userRepository.updatePasswordAndBumpVersion(
+      userId,
+      hashedPassword
+    );
+
+    return {
+      user: {
+        id: updated._id,
+        fullName: updated.fullName,
+        email: updated.email,
+        role: updated.role,
+      },
+      token: generateToken(updated._id, updated.tokenVersion ?? 0),
+    };
+  }
 }
 
 export default new AuthService();

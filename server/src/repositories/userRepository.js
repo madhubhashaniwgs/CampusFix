@@ -36,6 +36,19 @@ class UserRepository {
       { new: true }
     );
   }
+
+  // Updates the password and bumps tokenVersion in one write so all
+  // previously issued sessions are invalidated.
+  async updatePasswordAndBumpVersion(userId, hashedPassword) {
+    return User.findByIdAndUpdate(
+      userId,
+      {
+        password: hashedPassword,
+        $inc: { tokenVersion: 1 },
+      },
+      { new: true }
+    );
+  }
 }
 
 export default new UserRepository();
