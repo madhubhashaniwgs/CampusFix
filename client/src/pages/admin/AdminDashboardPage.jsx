@@ -26,7 +26,12 @@ import ImageModal from '../../components/common/ImageModal';
 import EmptyState from '../../components/common/EmptyState';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import IssueCard from '../../components/issues/IssueCard';
-import { getIssues, getIssueCount, getStaffMembers, assignIssue } from '../../services/issueService';
+import {
+  getIssues,
+  getIssueCount,
+  getStaffMembers,
+  assignIssue,
+} from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminDashboardPage() {
@@ -52,28 +57,20 @@ export default function AdminDashboardPage() {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const [
-        issuesRes,
-        staffRes,
-        total,
-        reported,
-        assigned,
-        inProgress,
-        resolved,
-        unassigned,
-      ] = await Promise.all([
-        getIssues({
-          status: 'reported,assigned,in_progress',
-          limit: 6,
-        }),
-        getStaffMembers().catch(() => ({ data: [] })),
-        getIssueCount(),
-        getIssueCount({ status: 'reported' }),
-        getIssueCount({ status: 'assigned' }),
-        getIssueCount({ status: 'in_progress' }),
-        getIssueCount({ status: 'resolved' }),
-        getIssueCount({ assignee: 'unassigned', status: 'reported,assigned,in_progress' }),
-      ]);
+      const [issuesRes, staffRes, total, reported, assigned, inProgress, resolved, unassigned] =
+        await Promise.all([
+          getIssues({
+            status: 'reported,assigned,in_progress',
+            limit: 6,
+          }),
+          getStaffMembers().catch(() => ({ data: [] })),
+          getIssueCount(),
+          getIssueCount({ status: 'reported' }),
+          getIssueCount({ status: 'assigned' }),
+          getIssueCount({ status: 'in_progress' }),
+          getIssueCount({ status: 'resolved' }),
+          getIssueCount({ assignee: 'unassigned', status: 'reported,assigned,in_progress' }),
+        ]);
 
       setIssues(issuesRes.data || []);
       setStaffMembers(staffRes.data?.staff || staffRes.data || []);
@@ -94,6 +91,11 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
+
+    // Auto-refresh dashboard data every 30 seconds.
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleQuickAssign = async (issueId, staffId) => {
@@ -172,7 +174,8 @@ export default function AdminDashboardPage() {
               Administrator Control Center
             </h1>
             <p className="text-purple-100 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
-              Monitor facilities across campus, assign technical staff to incoming tickets, and maintain high campus infrastructure standards.
+              Monitor facilities across campus, assign technical staff to incoming tickets, and
+              maintain high campus infrastructure standards.
             </p>
           </div>
 
@@ -201,7 +204,9 @@ export default function AdminDashboardPage() {
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <span>Campus Resolution Rate:</span>
               <strong className="text-white text-sm font-black">{resolutionRate}%</strong>
-              <span className="text-purple-200 font-semibold">({counts.resolved} of {counts.total} completed)</span>
+              <span className="text-purple-200 font-semibold">
+                ({counts.resolved} of {counts.total} completed)
+              </span>
             </div>
             <div className="w-full sm:w-64 bg-white/25 rounded-full h-2.5 overflow-hidden">
               <div
@@ -233,7 +238,9 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-purple-100">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-purple-950 tracking-tight">Recent Campus Issues</h2>
+              <h2 className="text-xl font-black text-purple-950 tracking-tight">
+                Recent Campus Issues
+              </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                 Live Feed
               </span>
@@ -300,9 +307,7 @@ export default function AdminDashboardPage() {
                 key={issue._id}
                 issue={issue}
                 onClick={() => navigate(`/admin/issues/${issue._id}`)}
-                onPhotoClick={(src, title) =>
-                  setActivePhoto({ isOpen: true, src, title })
-                }
+                onPhotoClick={(src, title) => setActivePhoto({ isOpen: true, src, title })}
               />
             ))}
           </div>

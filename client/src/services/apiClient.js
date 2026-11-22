@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -40,8 +39,7 @@ apiClient.interceptors.request.use(
   async (config) => {
     // The CSRF bootstrap endpoint must not trigger token fetch itself,
     // otherwise every request recursively spawns another /auth/csrf call.
-    const isCsrfBootstrap =
-      typeof config.url === 'string' && config.url.includes('/auth/csrf');
+    const isCsrfBootstrap = typeof config.url === 'string' && config.url.includes('/auth/csrf');
 
     if (!csrfToken && !isCsrfBootstrap) {
       await refreshCsrfToken();
@@ -65,8 +63,7 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
     const isAuthRequest =
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/register');
+      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
 
     // Retry once with a fresh CSRF token on CSRF failures.
     if (
@@ -85,8 +82,7 @@ apiClient.interceptors.response.use(
       sessionStorage.removeItem('campusfix_has_session');
 
       const path = window.location.pathname;
-      const onAuthPage =
-        path.startsWith('/login') || path.startsWith('/register');
+      const onAuthPage = path.startsWith('/login') || path.startsWith('/register');
 
       // Guard prevents repeated navigations when several requests
       // fail with 401 at the same time.

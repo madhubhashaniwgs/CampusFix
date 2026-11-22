@@ -20,12 +20,8 @@ const isTest = process.env.NODE_ENV === 'test';
 
 export const loginRateLimiter = isTest
   ? passthrough
-  : createRateLimiter(
-      'Too many login attempts. Please try again in 15 minutes.'
-    );
+  : createRateLimiter('Too many login attempts. Please try again in 15 minutes.');
 
 export const registerRateLimiter = isTest
   ? passthrough
-  : createRateLimiter(
-      'Too many registration attempts. Please try again in 15 minutes.'
-    );
+  : createRateLimiter('Too many registration attempts. Please try again in 15 minutes.');

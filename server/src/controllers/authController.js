@@ -33,10 +33,7 @@ class AuthController {
 
   login = async (req, res, next) => {
     try {
-      const result = await authService.login(
-        req.body.email,
-        req.body.password
-      );
+      const result = await authService.login(req.body.email, req.body.password);
 
       setAuthCookie(res, result.token);
 
@@ -54,9 +51,7 @@ class AuthController {
     try {
       const user = await authService.getCurrentUser(req.user.id);
 
-      res.status(200).json(
-        new ApiResponse(200, 'User retrieved successfully', user)
-      );
+      res.status(200).json(new ApiResponse(200, 'User retrieved successfully', user));
     } catch (error) {
       next(error);
     }
@@ -105,9 +100,7 @@ class AuthController {
 
       clearAuthCookie(res);
 
-      res.status(200).json(
-        new ApiResponse(200, 'Logout successful')
-      );
+      res.status(200).json(new ApiResponse(200, 'Logout successful'));
     } catch (error) {
       next(error);
     }

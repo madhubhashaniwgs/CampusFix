@@ -47,9 +47,7 @@ class UserRepository {
 
     const [users, totalItems] = await Promise.all([
       User.find(filter)
-        .select(
-          'fullName email role status studentId staffId department isActive createdAt'
-        )
+        .select('fullName email role status studentId staffId department isActive createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -60,25 +58,17 @@ class UserRepository {
   }
 
   async findStaffById(userId) {
-    return User.findById(userId).select(
+    return User.findById(userId).select('fullName email role status staffId department');
+  }
+
+  async setUserStatus(userId, status) {
+    return User.findByIdAndUpdate(userId, { status }, { new: true }).select(
       'fullName email role status staffId department'
     );
   }
 
-  async setUserStatus(userId, status) {
-    return User.findByIdAndUpdate(
-      userId,
-      { status },
-      { new: true }
-    ).select('fullName email role status staffId department');
-  }
-
   async incrementTokenVersion(userId) {
-    return User.findByIdAndUpdate(
-      userId,
-      { $inc: { tokenVersion: 1 } },
-      { new: true }
-    );
+    return User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } }, { new: true });
   }
 
   // Updates the password and bumps tokenVersion in one write so all

@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { MapPin, Calendar, UserRound, ArrowRight, Image as ImageIcon, ImageOff } from 'lucide-react';
+import {
+  MapPin,
+  Calendar,
+  UserRound,
+  ArrowRight,
+  Image as ImageIcon,
+  ImageOff,
+} from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import PriorityBadge from '../common/PriorityBadge';
 import CategoryBadge from '../common/CategoryBadge';
@@ -39,7 +46,7 @@ export default function IssueCard({ issue, onClick, onPhotoClick }) {
               className="w-full h-full object-cover opacity-95 transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-purple-950/60 via-transparent to-purple-950/20" />
-            
+
             {/* Subtle 'No Photo' tag on bottom right */}
             <div className="absolute bottom-3 right-3 bg-purple-950/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/20 flex items-center gap-1 shadow-sm">
               <ImageOff className="w-3 h-3 text-purple-300" />

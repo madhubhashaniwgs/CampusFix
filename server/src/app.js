@@ -41,14 +41,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/api/health', (req, res) => {
-  const response = new ApiResponse(
-    200,
-    'CampusFix API is running successfully!',
-    {
-      database: 'MongoDB Atlas',
-      server: 'Express',
-    }
-  );
+  const response = new ApiResponse(200, 'CampusFix API is running successfully!', {
+    database: 'MongoDB Atlas',
+    server: 'Express',
+  });
 
   res.status(response.statusCode).json(response);
 });

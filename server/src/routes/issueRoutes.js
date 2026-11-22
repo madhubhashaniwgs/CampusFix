@@ -14,36 +14,15 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.post(
-  '/',
-  authorize('student'),
-  validateCreateIssue,
-  issueController.createIssue
-);
+router.post('/', authorize('student'), validateCreateIssue, issueController.createIssue);
 
-router.get(
-  '/',
-  validateIssueListQuery,
-  issueController.getIssues
-);
+router.get('/', validateIssueListQuery, issueController.getIssues);
 
-router.get(
-  '/staff',
-  authorize('admin'),
-  issueController.getStaffMembers
-);
+router.get('/staff', authorize('admin'), issueController.getStaffMembers);
 
-router.patch(
-  '/:id/assign',
-  authorize('admin'),
-  validateAssignIssue,
-  issueController.assignIssue
-);
+router.patch('/:id/assign', authorize('admin'), validateAssignIssue, issueController.assignIssue);
 
-router.get(
-  '/:id',
-  issueController.getIssueById
-);
+router.get('/:id', issueController.getIssueById);
 
 router.patch(
   '/:id/status',
@@ -51,7 +30,5 @@ router.patch(
   validateUpdateStatus,
   issueController.updateIssueStatus
 );
-
-
 
 export default router;

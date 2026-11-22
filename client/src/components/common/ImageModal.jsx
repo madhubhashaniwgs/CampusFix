@@ -52,7 +52,9 @@ export default function ImageModal({ isOpen, src, alt = 'Attached photo', title,
             >
               <ZoomOut className="w-4 h-4" />
             </button>
-            <span className="text-xs text-slate-400 px-1 font-mono">{Math.round(scale * 100)}%</span>
+            <span className="text-xs text-slate-400 px-1 font-mono">
+              {Math.round(scale * 100)}%
+            </span>
             <button
               onClick={handleZoomIn}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -102,4 +104,3 @@ export default function ImageModal({ isOpen, src, alt = 'Attached photo', title,
     </div>
   );
 }
-

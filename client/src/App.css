@@ -35,8 +35,7 @@ a {
   padding: 40px 20px;
   background:
     radial-gradient(circle at 10% 10%, rgba(168, 85, 247, 0.08) 0, transparent 40%),
-    radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.08) 0, transparent 40%),
-    #f9f7fd;
+    radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.08) 0, transparent 40%), #f9f7fd;
 }
 
 .auth-layout {
@@ -309,7 +308,9 @@ a {
   color: #917eaf;
   background: transparent;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .password-toggle:hover {
@@ -488,7 +489,6 @@ a {
   }
 }
 
-
 .student-actions {
   display: flex;
   flex-wrap: wrap;
@@ -568,10 +568,22 @@ a {
   border-radius: 11px;
 }
 
-.student-stat-icon.purple { color: #7c3aed; background: #ede9fe; }
-.student-stat-icon.orange { color: #ea580c; background: #ffedd5; }
-.student-stat-icon.indigo { color: #4f46e5; background: #e0e7ff; }
-.student-stat-icon.green { color: #059669; background: #d1fae5; }
+.student-stat-icon.purple {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+.student-stat-icon.orange {
+  color: #ea580c;
+  background: #ffedd5;
+}
+.student-stat-icon.indigo {
+  color: #4f46e5;
+  background: #e0e7ff;
+}
+.student-stat-icon.green {
+  color: #059669;
+  background: #d1fae5;
+}
 
 .student-stat-card span {
   display: block;
@@ -672,11 +684,26 @@ a {
   text-transform: capitalize;
 }
 
-.status-pill.reported { color: #c2410c; background: #ffedd5; }
-.status-pill.assigned { color: #1d4ed8; background: #dbeafe; }
-.status-pill.in_progress { color: #4338ca; background: #e0e7ff; }
-.status-pill.resolved { color: #047857; background: #d1fae5; }
-.status-pill.rejected { color: #b91c1c; background: #fee2e2; }
+.status-pill.reported {
+  color: #c2410c;
+  background: #ffedd5;
+}
+.status-pill.assigned {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+.status-pill.in_progress {
+  color: #4338ca;
+  background: #e0e7ff;
+}
+.status-pill.resolved {
+  color: #047857;
+  background: #d1fae5;
+}
+.status-pill.rejected {
+  color: #b91c1c;
+  background: #fee2e2;
+}
 
 @media (max-width: 800px) {
   .student-stats-grid {
@@ -797,10 +824,22 @@ a {
   text-transform: capitalize;
 }
 
-.priority-badge.low { color: #047857; background: #d1fae5; }
-.priority-badge.medium { color: #92400e; background: #fef3c7; }
-.priority-badge.high { color: #c2410c; background: #ffedd5; }
-.priority-badge.urgent { color: #b42318; background: #fee4e2; }
+.priority-badge.low {
+  color: #047857;
+  background: #d1fae5;
+}
+.priority-badge.medium {
+  color: #92400e;
+  background: #fef3c7;
+}
+.priority-badge.high {
+  color: #c2410c;
+  background: #ffedd5;
+}
+.priority-badge.urgent {
+  color: #b42318;
+  background: #fee4e2;
+}
 
 /* Recent issues table */
 
@@ -930,8 +969,13 @@ tr.recent-issue-row:hover td {
 }
 
 @keyframes progress-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 /* Dashboard entrance animations & micro-interactions */
@@ -963,7 +1007,9 @@ tr.recent-issue-row:hover td {
 }
 
 .student-stat-card {
-  transition: transform 0.18s ease, box-shadow 0.18s ease,
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
     border-color 0.18s ease;
 }
 
@@ -1031,7 +1077,9 @@ tr:hover .priority-badge {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .role-toggle-btn.active {

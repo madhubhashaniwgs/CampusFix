@@ -82,9 +82,7 @@ export default function MyIssuesPage() {
     try {
       const counts = await Promise.all(
         STATUS_TABS.map((t) =>
-          t.value === 'all'
-            ? getIssueCount()
-            : getIssueCount({ status: t.value })
+          t.value === 'all' ? getIssueCount() : getIssueCount({ status: t.value })
         )
       );
       const map = {};

@@ -3,13 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { changePassword } from '../services/authService';
 import { useToast } from '../context/ToastContext';
-import {
-  Mail,
-  LockKeyhole,
-  Eye,
-  EyeOff,
-  KeyRound,
-} from 'lucide-react';
+import { Mail, LockKeyhole, Eye, EyeOff, KeyRound } from 'lucide-react';
 
 import AppLayout from '../components/layouts/AppLayout';
 
@@ -60,8 +54,8 @@ export default function ProfilePage() {
     } catch (err) {
       toastError(
         err.response?.data?.errors?.[0] ||
-        err.response?.data?.message ||
-        'Unable to change password. Please verify your current password.'
+          err.response?.data?.message ||
+          'Unable to change password. Please verify your current password.'
       );
     } finally {
       setSubmitting(false);
@@ -78,9 +72,15 @@ export default function ProfilePage() {
     : 'U';
 
   const roleBadges = {
-    student: { label: 'Student Portal', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+    student: {
+      label: 'Student Portal',
+      color: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    },
     staff: { label: 'Staff Technician', color: 'bg-sky-100 text-sky-900 border-sky-300' },
-    admin: { label: 'Campus Administrator', color: 'bg-purple-100 text-purple-900 border-purple-300' },
+    admin: {
+      label: 'Campus Administrator',
+      color: 'bg-purple-100 text-purple-900 border-purple-300',
+    },
   };
 
   const currentRole = roleBadges[user?.role] || roleBadges.student;
@@ -108,7 +108,9 @@ export default function ProfilePage() {
             <div className="text-center sm:text-left space-y-1.5 flex-1">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                 <h2 className="text-xl font-black text-purple-950">{user?.fullName}</h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border ${currentRole.color}`}>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border ${currentRole.color}`}
+                >
                   {currentRole.label}
                 </span>
               </div>
@@ -122,7 +124,9 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 text-xs">
             <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200">
               <span className="text-purple-700 font-bold block mb-1">Access Role</span>
-              <strong className="text-purple-950 capitalize text-sm font-black">{user?.role}</strong>
+              <strong className="text-purple-950 capitalize text-sm font-black">
+                {user?.role}
+              </strong>
             </div>
             <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200">
               <span className="text-purple-700 font-bold block mb-1">Account Status</span>

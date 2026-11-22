@@ -17,10 +17,7 @@ class IssueRepository {
     const queryFilter = { ...filter };
 
     if (search) {
-      const escapedSearch = search.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&'
-      );
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = { $regex: escapedSearch, $options: 'i' };
 
       queryFilter.$or = [
@@ -45,11 +42,7 @@ class IssueRepository {
   }
 
   async findByIdAndUpdate(issueId, updateData) {
-    return Issue.findByIdAndUpdate(
-      issueId,
-      updateData,
-      { new: true, runValidators: true }
-    )
+    return Issue.findByIdAndUpdate(issueId, updateData, { new: true, runValidators: true })
       .populate('reportedBy', 'fullName email')
       .populate('assignedTo', 'fullName email')
       .populate('statusHistory.updatedBy', 'fullName');
@@ -57,10 +50,10 @@ class IssueRepository {
 
   async findStaffMembers({ page = 1, limit = 10 } = {}) {
     const filter = {
-        role: 'staff',
-        isActive: true,
-        // Treat missing status (pre-migration docs) as active.
-        $or: [{ status: 'active' }, { status: { $exists: false } }],
+      role: 'staff',
+      isActive: true,
+      // Treat missing status (pre-migration docs) as active.
+      $or: [{ status: 'active' }, { status: { $exists: false } }],
     };
 
     const skip = (page - 1) * limit;
@@ -75,34 +68,34 @@ class IssueRepository {
     ]);
 
     return { staff, totalItems };
- }
+  }
 
-    async assignStaff(issueId, staffId, adminId, note) {
+  async assignStaff(issueId, staffId, adminId, note) {
     return Issue.findByIdAndUpdate(
-        issueId,
-        {
+      issueId,
+      {
         $set: {
-            assignedTo: staffId,
-            status: 'assigned',
+          assignedTo: staffId,
+          status: 'assigned',
         },
         $push: {
-            statusHistory: {
+          statusHistory: {
             status: 'assigned',
             updatedBy: adminId,
             note: note || 'Issue assigned to staff member',
             updatedAt: new Date(),
-            },
+          },
         },
-        },
-        {
+      },
+      {
         new: true,
         runValidators: true,
-        }
+      }
     )
-        .populate('reportedBy', 'fullName email')
-        .populate('assignedTo', 'fullName email')
-        .populate('statusHistory.updatedBy', 'fullName');
-    }
+      .populate('reportedBy', 'fullName email')
+      .populate('assignedTo', 'fullName email')
+      .populate('statusHistory.updatedBy', 'fullName');
+  }
 }
 
 export default new IssueRepository();

@@ -72,9 +72,7 @@ export default function AdminUsersPage() {
         }
       );
     } catch (err) {
-      toastError(
-        err.response?.data?.message || 'Unable to load users.'
-      );
+      toastError(err.response?.data?.message || 'Unable to load users.');
     } finally {
       setLoading(false);
     }
@@ -126,9 +124,7 @@ export default function AdminUsersPage() {
           className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
           title="Refresh"
         >
-          <RefreshCw
-            className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`}
-          />
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
         </button>
       </div>
 
@@ -185,15 +181,10 @@ export default function AdminUsersPage() {
         {loading ? (
           <div className="py-20 text-center">
             <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-purple-900/70 font-semibold">
-              Loading users...
-            </p>
+            <p className="text-sm text-purple-900/70 font-semibold">Loading users...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <EmptyState
-            title="No users found"
-            description="Try adjusting your search or filters."
-          />
+          <EmptyState title="No users found" description="Try adjusting your search or filters." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -221,17 +212,10 @@ export default function AdminUsersPage() {
               </thead>
               <tbody className="divide-y divide-purple-100">
                 {filteredUsers.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="hover:bg-purple-50/60 transition-colors"
-                  >
+                  <tr key={u.id} className="hover:bg-purple-50/60 transition-colors">
                     <td className="py-3 px-4">
-                      <p className="font-bold text-purple-950 text-sm">
-                        {u.fullName}
-                      </p>
-                      <p className="text-xs text-purple-800/60 font-medium">
-                        {u.email}
-                      </p>
+                      <p className="font-bold text-purple-950 text-sm">{u.fullName}</p>
+                      <p className="text-xs text-purple-800/60 font-medium">{u.email}</p>
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-800 capitalize">
@@ -242,10 +226,7 @@ export default function AdminUsersPage() {
                     <td className="py-3 px-4 text-xs font-semibold text-purple-900/80 whitespace-nowrap">
                       {memberId(u)}
                       {u.department && (
-                        <span className="text-purple-700/50">
-                          {' '}
-                          · {u.department}
-                        </span>
+                        <span className="text-purple-700/50"> · {u.department}</span>
                       )}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
@@ -256,9 +237,7 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs font-medium text-purple-800/70 whitespace-nowrap">
-                      {u.createdAt
-                        ? new Date(u.createdAt).toLocaleDateString()
-                        : '—'}
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
@@ -282,15 +261,11 @@ export default function AdminUsersPage() {
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs font-semibold text-purple-900/70">
             Showing{' '}
-            <strong className="text-purple-950">
-              {(pagination.page - 1) * PAGE_SIZE + 1}
-            </strong>{' '}
-            to{' '}
+            <strong className="text-purple-950">{(pagination.page - 1) * PAGE_SIZE + 1}</strong> to{' '}
             <strong className="text-purple-950">
               {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
             </strong>{' '}
-            of <strong className="text-purple-950">{pagination.totalItems}</strong>{' '}
-            users
+            of <strong className="text-purple-950">{pagination.totalItems}</strong> users
           </p>
 
           <div className="flex items-center gap-2">
@@ -341,28 +316,18 @@ export default function AdminUsersPage() {
                   {roleIcon(selectedUser.role)}
                 </div>
                 <div>
-                  <p className="font-extrabold text-purple-950">
-                    {selectedUser.fullName}
-                  </p>
-                  <p className="text-xs text-purple-800/60 font-medium">
-                    {selectedUser.email}
-                  </p>
+                  <p className="font-extrabold text-purple-950">{selectedUser.fullName}</p>
+                  <p className="text-xs text-purple-800/60 font-medium">{selectedUser.email}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
-                    Role
-                  </p>
-                  <p className="font-extrabold text-purple-950 capitalize">
-                    {selectedUser.role}
-                  </p>
+                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">Role</p>
+                  <p className="font-extrabold text-purple-950 capitalize">{selectedUser.role}</p>
                 </div>
                 <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
-                    Status
-                  </p>
+                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">Status</p>
                   <p
                     className={`font-extrabold capitalize ${
                       selectedUser.status === 'active'
@@ -383,17 +348,13 @@ export default function AdminUsersPage() {
                         ? 'Staff ID'
                         : 'ID'}
                   </p>
-                  <p className="font-extrabold text-purple-950">
-                    {memberId(selectedUser)}
-                  </p>
+                  <p className="font-extrabold text-purple-950">{memberId(selectedUser)}</p>
                 </div>
                 <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
                   <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
                     Department
                   </p>
-                  <p className="font-extrabold text-purple-950">
-                    {selectedUser.department || '—'}
-                  </p>
+                  <p className="font-extrabold text-purple-950">{selectedUser.department || '—'}</p>
                 </div>
                 <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100 col-span-2">
                   <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">

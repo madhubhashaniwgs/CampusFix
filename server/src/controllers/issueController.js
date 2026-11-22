@@ -4,18 +4,9 @@ import ApiResponse from '../utils/ApiResponse.js';
 class IssueController {
   createIssue = async (req, res, next) => {
     try {
-      const issue = await issueService.createIssue(
-        req.body,
-        req.user.id
-      );
+      const issue = await issueService.createIssue(req.body, req.user.id);
 
-      res.status(201).json(
-        new ApiResponse(
-          201,
-          'Issue reported successfully',
-          issue
-        )
-      );
+      res.status(201).json(new ApiResponse(201, 'Issue reported successfully', issue));
     } catch (error) {
       next(error);
     }
@@ -28,11 +19,7 @@ class IssueController {
         req.issueListQuery || {}
       );
 
-      const response = new ApiResponse(
-        200,
-        'Issues retrieved successfully',
-        issues
-      );
+      const response = new ApiResponse(200, 'Issues retrieved successfully', issues);
 
       response.pagination = pagination;
 
@@ -44,18 +31,9 @@ class IssueController {
 
   getIssueById = async (req, res, next) => {
     try {
-      const issue = await issueService.getIssueById(
-        req.params.id,
-        req.user
-      );
+      const issue = await issueService.getIssueById(req.params.id, req.user);
 
-      res.status(200).json(
-        new ApiResponse(
-          200,
-          'Issue retrieved successfully',
-          issue
-        )
-      );
+      res.status(200).json(new ApiResponse(200, 'Issue retrieved successfully', issue));
     } catch (error) {
       next(error);
     }
@@ -65,67 +43,40 @@ class IssueController {
     try {
       const { status, note } = req.body;
 
-      const issue = await issueService.updateIssueStatus(
-        req.params.id,
-        status,
-        note,
-        req.user
-      );
+      const issue = await issueService.updateIssueStatus(req.params.id, status, note, req.user);
 
-      res.status(200).json(
-        new ApiResponse(
-          200,
-          'Issue status updated successfully',
-          issue
-        )
-      );
+      res.status(200).json(new ApiResponse(200, 'Issue status updated successfully', issue));
     } catch (error) {
       next(error);
     }
   };
 
-    getStaffMembers = async (req, res, next) => {
+  getStaffMembers = async (req, res, next) => {
     try {
-        const { page, limit } = req.query;
+      const { page, limit } = req.query;
 
-        const result = await issueService.getStaffMembers({
-            page: Math.max(1, parseInt(page, 10) || 1),
-            limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
-        });
+      const result = await issueService.getStaffMembers({
+        page: Math.max(1, parseInt(page, 10) || 1),
+        limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
+      });
 
-        res.status(200).json(
-        new ApiResponse(
-            200,
-            'Staff members retrieved successfully',
-            result
-        )
-        );
+      res.status(200).json(new ApiResponse(200, 'Staff members retrieved successfully', result));
     } catch (error) {
-        next(error);
+      next(error);
     }
-    };
+  };
 
-    assignIssue = async (req, res, next) => {
+  assignIssue = async (req, res, next) => {
     try {
-        const { staffId } = req.body;
+      const { staffId } = req.body;
 
-        const issue = await issueService.assignIssue(
-        req.params.id,
-        staffId,
-        req.user.id
-        );
+      const issue = await issueService.assignIssue(req.params.id, staffId, req.user.id);
 
-        res.status(200).json(
-        new ApiResponse(
-            200,
-            'Issue assigned successfully',
-            issue
-        )
-        );
+      res.status(200).json(new ApiResponse(200, 'Issue assigned successfully', issue));
     } catch (error) {
-        next(error);
+      next(error);
     }
-    };
+  };
 }
 
 export default new IssueController();

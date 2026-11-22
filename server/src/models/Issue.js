@@ -3,10 +3,10 @@ import mongoose from 'mongoose';
 const issueSchema = new mongoose.Schema(
   {
     ticketId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
     },
 
     title: {
@@ -25,13 +25,7 @@ const issueSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: [
-        'electrical',
-        'plumbing',
-        'it',
-        'furniture',
-        'other',
-      ],
+      enum: ['electrical', 'plumbing', 'it', 'furniture', 'other'],
       required: true,
     },
 
@@ -56,13 +50,7 @@ const issueSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: [
-        'reported',
-        'assigned',
-        'in_progress',
-        'resolved',
-        'rejected',
-      ],
+      enum: ['reported', 'assigned', 'in_progress', 'resolved', 'rejected'],
       default: 'reported',
     },
 
@@ -82,13 +70,7 @@ const issueSchema = new mongoose.Schema(
       {
         status: {
           type: String,
-          enum: [
-            'reported',
-            'assigned',
-            'in_progress',
-            'resolved',
-            'rejected',
-          ],
+          enum: ['reported', 'assigned', 'in_progress', 'resolved', 'rejected'],
         },
         updatedBy: {
           type: mongoose.Schema.Types.ObjectId,

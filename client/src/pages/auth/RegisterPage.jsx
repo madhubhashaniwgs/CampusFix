@@ -49,7 +49,8 @@ export default function RegisterPage() {
   const passwordStrength = useMemo(() => {
     const pw = formData.password;
     if (!pw) return { level: 0, text: '', color: '' };
-    if (pw.length < 6) return { level: 1, text: 'Too short (min 6 chars)', color: 'bg-rose-500 text-rose-600' };
+    if (pw.length < 6)
+      return { level: 1, text: 'Too short (min 6 chars)', color: 'bg-rose-500 text-rose-600' };
     if (pw.length < 9) return { level: 2, text: 'Moderate', color: 'bg-amber-500 text-amber-600' };
     return { level: 3, text: 'Strong', color: 'bg-emerald-500 text-emerald-600' };
   }, [formData.password]);
@@ -128,7 +129,8 @@ export default function RegisterPage() {
           <div>
             <h2>Join CampusFix today</h2>
             <p>
-              Report campus maintenance issues in seconds and watch them move from reported to resolved — all in one unified portal.
+              Report campus maintenance issues in seconds and watch them move from reported to
+              resolved — all in one unified portal.
             </p>
 
             <div className="auth-showcase-features">
@@ -147,9 +149,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="auth-showcase-footer">
-            Student facility reporting, simplified.
-          </div>
+          <div className="auth-showcase-footer">Student facility reporting, simplified.</div>
         </aside>
 
         <div className="auth-form-panel bg-purple-50/70">
@@ -202,7 +202,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="fullName" className="text-purple-950 font-bold">Full name</label>
+                <label htmlFor="fullName" className="text-purple-950 font-bold">
+                  Full name
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <UserRound size={18} className="text-purple-500" />
                   <input
@@ -219,7 +221,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="email" className="text-purple-950 font-bold">Email address</label>
+                <label htmlFor="email" className="text-purple-950 font-bold">
+                  Email address
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <Mail size={18} className="text-purple-500" />
                   <input
@@ -299,7 +303,9 @@ export default function RegisterPage() {
               )}
 
               <div className="form-group">
-                <label htmlFor="password" className="text-purple-950 font-bold">Password</label>
+                <label htmlFor="password" className="text-purple-950 font-bold">
+                  Password
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <LockKeyhole size={18} className="text-purple-500" />
                   <input
@@ -337,7 +343,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="confirmPassword" className="text-purple-950 font-bold">Confirm password</label>
+                <label htmlFor="confirmPassword" className="text-purple-950 font-bold">
+                  Confirm password
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <LockKeyhole size={18} className="text-purple-500" />
                   <input

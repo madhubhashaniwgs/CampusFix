@@ -26,21 +26,33 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const success = useCallback((message, title = 'Success', duration = 3500) => {
-    return addToast({ type: 'success', title, message, duration });
-  }, [addToast]);
+  const success = useCallback(
+    (message, title = 'Success', duration = 3500) => {
+      return addToast({ type: 'success', title, message, duration });
+    },
+    [addToast]
+  );
 
-  const error = useCallback((message, title = 'Error', duration = 5000) => {
-    return addToast({ type: 'error', title, message, duration });
-  }, [addToast]);
+  const error = useCallback(
+    (message, title = 'Error', duration = 5000) => {
+      return addToast({ type: 'error', title, message, duration });
+    },
+    [addToast]
+  );
 
-  const info = useCallback((message, title = 'Info', duration = 3500) => {
-    return addToast({ type: 'info', title, message, duration });
-  }, [addToast]);
+  const info = useCallback(
+    (message, title = 'Info', duration = 3500) => {
+      return addToast({ type: 'info', title, message, duration });
+    },
+    [addToast]
+  );
 
-  const warning = useCallback((message, title = 'Warning', duration = 4000) => {
-    return addToast({ type: 'warning', title, message, duration });
-  }, [addToast]);
+  const warning = useCallback(
+    (message, title = 'Warning', duration = 4000) => {
+      return addToast({ type: 'warning', title, message, duration });
+    },
+    [addToast]
+  );
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast, success, error, info, warning }}>
@@ -78,7 +90,11 @@ const ToastItem = ({ toast, onClose }) => {
     >
       <div className="mt-0.5">{icons[toast.type] || icons.info}</div>
       <div className="flex-1 min-w-0">
-        {toast.title && <h4 className="text-sm font-semibold text-slate-900 leading-tight mb-0.5">{toast.title}</h4>}
+        {toast.title && (
+          <h4 className="text-sm font-semibold text-slate-900 leading-tight mb-0.5">
+            {toast.title}
+          </h4>
+        )}
         <p className="text-xs text-slate-600 leading-relaxed break-words">{toast.message}</p>
       </div>
       <button
@@ -99,4 +115,3 @@ export const useToast = () => {
   }
   return context;
 };
-

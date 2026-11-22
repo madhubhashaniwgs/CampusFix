@@ -37,17 +37,11 @@ class IssueService {
         const isTicketIdConflict =
           error.code === 11000 &&
           error.keyPattern &&
-          Object.prototype.hasOwnProperty.call(
-            error.keyPattern,
-            'ticketId'
-          );
+          Object.prototype.hasOwnProperty.call(error.keyPattern, 'ticketId');
 
         if (!isTicketIdConflict || attempt === maxAttempts - 1) {
           if (isTicketIdConflict) {
-            throw new ApiError(
-              500,
-              'Unable to generate a unique ticket ID. Please try again.'
-            );
+            throw new ApiError(500, 'Unable to generate a unique ticket ID. Please try again.');
           }
           throw error;
         }
@@ -90,23 +84,16 @@ class IssueService {
     }
 
     const filter =
-      conditions.length === 0
-        ? {}
-        : conditions.length === 1
-          ? conditions[0]
-          : { $and: conditions };
+      conditions.length === 0 ? {} : conditions.length === 1 ? conditions[0] : { $and: conditions };
 
     const page = query.page || 1;
     const limit = query.limit || 10;
 
-    const { issues, totalItems } = await issueRepository.findAll(
-      filter,
-      {
-        page,
-        limit,
-        search: query.search || undefined,
-      }
-    );
+    const { issues, totalItems } = await issueRepository.findAll(filter, {
+      page,
+      limit,
+      search: query.search || undefined,
+    });
 
     return {
       issues,
@@ -131,10 +118,8 @@ class IssueService {
     }
 
     const isAdmin = user.role === 'admin';
-    const isReporter =
-      issue.reportedBy?._id.toString() === user.id;
-    const isAssignedStaff =
-      issue.assignedTo?._id.toString() === user.id;
+    const isReporter = issue.reportedBy?._id.toString() === user.id;
+    const isAssignedStaff = issue.assignedTo?._id.toString() === user.id;
 
     if (!isAdmin && !isReporter && !isAssignedStaff) {
       throw new ApiError(403, 'You are not allowed to view this issue');
@@ -155,14 +140,10 @@ class IssueService {
     }
 
     const isAdmin = user.role === 'admin';
-    const isAssignedStaff =
-      issue.assignedTo?._id.toString() === user.id;
+    const isAssignedStaff = issue.assignedTo?._id.toString() === user.id;
 
     if (!isAdmin && !isAssignedStaff) {
-      throw new ApiError(
-        403,
-        'Only the assigned staff member or an admin can update this issue'
-      );
+      throw new ApiError(403, 'Only the assigned staff member or an admin can update this issue');
     }
 
     const allowedTransitions = {
@@ -174,61 +155,51 @@ class IssueService {
     };
 
     if (!allowedTransitions[issue.status]?.includes(status)) {
-      throw new ApiError(
-        400,
-        `Cannot change issue status from ${issue.status} to ${status}`
-      );
+      throw new ApiError(400, `Cannot change issue status from ${issue.status} to ${status}`);
     }
 
-    return issueRepository.findByIdAndUpdate(
-      issueId,
-      {
-        $set: { status },
-        $push: {
-          statusHistory: {
-            status,
-            updatedBy: user.id,
-            note: note || '',
-            updatedAt: new Date(),
-          },
+    return issueRepository.findByIdAndUpdate(issueId, {
+      $set: { status },
+      $push: {
+        statusHistory: {
+          status,
+          updatedBy: user.id,
+          note: note || '',
+          updatedAt: new Date(),
         },
-      }
-    );
+      },
+    });
   }
 
-    async getStaffMembers({ page = 1, limit = 10 } = {}) {
-    const { staff, totalItems } =
-        await issueRepository.findStaffMembers({ page, limit });
+  async getStaffMembers({ page = 1, limit = 10 } = {}) {
+    const { staff, totalItems } = await issueRepository.findStaffMembers({ page, limit });
 
     return {
-        staff: staff.map((s) => ({
-            id: s._id,
-            fullName: s.fullName,
-            email: s.email,
-            staffId: s.staffId || null,
-            department: s.department || null,
-        })),
-        pagination: {
-            page,
-            pageSize: limit,
-            totalItems,
-            totalPages: Math.ceil(totalItems / limit),
-        },
+      staff: staff.map((s) => ({
+        id: s._id,
+        fullName: s.fullName,
+        email: s.email,
+        staffId: s.staffId || null,
+        department: s.department || null,
+      })),
+      pagination: {
+        page,
+        pageSize: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
     };
-    }
+  }
 
-    async assignIssue(issueId, staffId, adminId) {
-    if (
-        !mongoose.isValidObjectId(issueId) ||
-        !mongoose.isValidObjectId(staffId)
-    ) {
-        throw new ApiError(400, 'Invalid issue ID or staff ID');
+  async assignIssue(issueId, staffId, adminId) {
+    if (!mongoose.isValidObjectId(issueId) || !mongoose.isValidObjectId(staffId)) {
+      throw new ApiError(400, 'Invalid issue ID or staff ID');
     }
 
     const issue = await issueRepository.findById(issueId);
 
     if (!issue) {
-        throw new ApiError(404, 'Issue not found');
+      throw new ApiError(404, 'Issue not found');
     }
 
     // Assignment sets status to 'assigned', so it is only valid from
@@ -236,35 +207,30 @@ class IssueService {
     // This reuses the same transition rules as updateIssueStatus and
     // prevents in_progress/resolved/rejected issues from being reset.
     if (!['reported', 'assigned'].includes(issue.status)) {
-        throw new ApiError(
-        400,
-        `Cannot assign an issue with status "${issue.status}"`
-        );
+      throw new ApiError(400, `Cannot assign an issue with status "${issue.status}"`);
     }
 
     const staff = await userRepository.findActiveStaffById(staffId);
 
     if (!staff) {
-        throw new ApiError(404, 'Active staff member not found');
+      throw new ApiError(404, 'Active staff member not found');
     }
 
     // Re-assigning the same staff member is a no-op: return the
     // already-populated issue without writing a duplicate history entry.
     if (issue.assignedTo?._id.toString() === staffId) {
-        return issue;
+      return issue;
     }
 
     const isReassignment = Boolean(issue.assignedTo);
 
     return issueRepository.assignStaff(
-        issueId,
-        staffId,
-        adminId,
-        isReassignment
-            ? 'Issue reassigned to staff member'
-            : 'Issue assigned to staff member'
+      issueId,
+      staffId,
+      adminId,
+      isReassignment ? 'Issue reassigned to staff member' : 'Issue assigned to staff member'
     );
-    }
+  }
 }
 
 export default new IssueService();

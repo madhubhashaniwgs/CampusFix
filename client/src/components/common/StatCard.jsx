@@ -4,13 +4,15 @@ const colorStyles = {
   purple: {
     bg: 'from-purple-500/12 via-purple-500/5 to-transparent',
     border: 'border-purple-300 hover:border-purple-500',
-    iconBg: 'bg-gradient-to-tr from-purple-700 to-indigo-600 text-white shadow-md shadow-purple-600/25',
+    iconBg:
+      'bg-gradient-to-tr from-purple-700 to-indigo-600 text-white shadow-md shadow-purple-600/25',
     text: 'text-purple-800',
   },
   amber: {
     bg: 'from-amber-500/12 via-amber-500/5 to-transparent',
     border: 'border-amber-300 hover:border-amber-500',
-    iconBg: 'bg-gradient-to-tr from-amber-600 to-orange-500 text-white shadow-md shadow-amber-600/25',
+    iconBg:
+      'bg-gradient-to-tr from-amber-600 to-orange-500 text-white shadow-md shadow-amber-600/25',
     text: 'text-amber-800',
   },
   sky: {
@@ -22,13 +24,15 @@ const colorStyles = {
   indigo: {
     bg: 'from-indigo-500/12 via-indigo-500/5 to-transparent',
     border: 'border-indigo-300 hover:border-indigo-500',
-    iconBg: 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/25',
+    iconBg:
+      'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/25',
     text: 'text-indigo-800',
   },
   emerald: {
     bg: 'from-emerald-500/12 via-emerald-500/5 to-transparent',
     border: 'border-emerald-300 hover:border-emerald-500',
-    iconBg: 'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25',
+    iconBg:
+      'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25',
     text: 'text-emerald-800',
   },
   rose: {
@@ -67,13 +71,9 @@ export default function StatCard({
             {title}
           </p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-purple-950 tracking-tight">
-              {value}
-            </h3>
+            <h3 className="text-3xl font-black text-purple-950 tracking-tight">{value}</h3>
             {subtitle && (
-              <span className="text-xs font-semibold text-purple-700/80">
-                {subtitle}
-              </span>
+              <span className="text-xs font-semibold text-purple-700/80">{subtitle}</span>
             )}
           </div>
         </div>

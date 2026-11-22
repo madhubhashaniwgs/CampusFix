@@ -17,12 +17,7 @@ import {
 import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
 import { getStaffMembers } from '../../services/issueService';
-import {
-  createStaffMember,
-  getUsers,
-  approveStaff,
-  rejectStaff,
-} from '../../services/userService';
+import { createStaffMember, getUsers, approveStaff, rejectStaff } from '../../services/userService';
 import { useToast } from '../../context/ToastContext';
 import { Check, X as XIcon, Clock } from 'lucide-react';
 
@@ -118,7 +113,7 @@ export default function AdminStaffPage() {
     } catch (err) {
       toastError(
         err.response?.data?.message ||
-        'Unable to create staff account. Please check inputs and try again.'
+          'Unable to create staff account. Please check inputs and try again.'
       );
     } finally {
       setSubmitting(false);
@@ -286,7 +281,8 @@ export default function AdminStaffPage() {
             Staff & Technician Team
           </h1>
           <p className="text-sm text-purple-900/70 mt-1 font-medium">
-            Manage authorized staff accounts, review personnel directory, and provision new technician credentials.
+            Manage authorized staff accounts, review personnel directory, and provision new
+            technician credentials.
           </p>
         </div>
 
@@ -343,9 +339,7 @@ export default function AdminStaffPage() {
         <div className="purple-card rounded-3xl p-5 sm:p-6 mb-6 border-2 border-amber-300/60 bg-amber-50/40">
           <div className="flex items-center gap-2.5 mb-4">
             <Clock className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-black text-purple-950">
-              Pending Staff Approvals
-            </h2>
+            <h2 className="text-lg font-black text-purple-950">Pending Staff Approvals</h2>
             <span className="ml-auto text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full">
               {pendingStaff.length} waiting
             </span>
@@ -358,12 +352,8 @@ export default function AdminStaffPage() {
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/90 border border-amber-200 rounded-2xl p-4"
               >
                 <div className="min-w-0">
-                  <p className="font-extrabold text-purple-950 truncate">
-                    {member.fullName}
-                  </p>
-                  <p className="text-xs text-purple-800/70 font-medium truncate">
-                    {member.email}
-                  </p>
+                  <p className="font-extrabold text-purple-950 truncate">{member.fullName}</p>
+                  <p className="text-xs text-purple-800/70 font-medium truncate">{member.email}</p>
                   <p className="text-[11px] text-purple-700/60 font-semibold mt-0.5">
                     {member.staffId && `Staff ID: ${member.staffId}`}
                     {member.staffId && member.department && ' · '}
@@ -459,7 +449,8 @@ export default function AdminStaffPage() {
 
                 <div className="mt-5 pt-3 border-t border-purple-100 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-purple-700 font-semibold">
-                    Added {new Date(staff.createdAt || Date.now()).toLocaleDateString('en-GB', {
+                    Added{' '}
+                    {new Date(staff.createdAt || Date.now()).toLocaleDateString('en-GB', {
                       month: 'short',
                       year: 'numeric',
                     })}
@@ -480,15 +471,11 @@ export default function AdminStaffPage() {
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs font-semibold text-purple-900/70">
             Showing{' '}
-            <strong className="text-purple-950">
-              {(pagination.page - 1) * PAGE_SIZE + 1}
-            </strong>{' '}
-            to{' '}
+            <strong className="text-purple-950">{(pagination.page - 1) * PAGE_SIZE + 1}</strong> to{' '}
             <strong className="text-purple-950">
               {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
             </strong>{' '}
-            of <strong className="text-purple-950">{pagination.totalItems}</strong>{' '}
-            staff members
+            of <strong className="text-purple-950">{pagination.totalItems}</strong> staff members
           </p>
 
           <div className="flex items-center gap-2">

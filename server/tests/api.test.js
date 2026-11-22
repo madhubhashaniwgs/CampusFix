@@ -13,21 +13,14 @@ const TEST_DB_NAME = 'campusfix_test';
 const VALID_PASSWORD = 'TestPass123';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error(
-    'MONGODB_URI is not set. Tests require server/.env configuration.'
-  );
+  throw new Error('MONGODB_URI is not set. Tests require server/.env configuration.');
 }
 
-process.env.MONGODB_URI = process.env.MONGODB_URI.replace(
-  /\/[^/?]+(\?|$)/,
-  `/${TEST_DB_NAME}$1`
-);
+process.env.MONGODB_URI = process.env.MONGODB_URI.replace(/\/[^/?]+(\?|$)/, `/${TEST_DB_NAME}$1`);
 
 // Safety guard: refuse to run destructive tests unless the resolved
 // connection string explicitly targets the dedicated test database.
-const resolvedDbMatch = process.env.MONGODB_URI.match(
-  /^mongodb(\+srv)?:\/\/[^/]+\/([^/?]+)/
-);
+const resolvedDbMatch = process.env.MONGODB_URI.match(/^mongodb(\+srv)?:\/\/[^/]+\/([^/?]+)/);
 
 if (!resolvedDbMatch || resolvedDbMatch[2] !== TEST_DB_NAME) {
   throw new Error(
@@ -69,8 +62,7 @@ const api = async (method, path, { body, bare = false, csrf = null } = {}) => {
     if (cookieHeader) headers.Cookie = cookieHeader;
 
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      headers['X-CSRF-Token'] =
-        csrf === null ? jar.csrf_token : csrf;
+      headers['X-CSRF-Token'] = csrf === null ? jar.csrf_token : csrf;
     }
   }
 
@@ -231,28 +223,20 @@ describe('CSRF protection', () => {
   });
 
   test('POST without CSRF token is rejected', async () => {
-    const res = await api(
-      'POST',
-      '/api/auth/login',
-      {
-        body: { email: 'x@test.com', password: VALID_PASSWORD },
-        csrf: 'definitely-wrong',
-      }
-    );
+    const res = await api('POST', '/api/auth/login', {
+      body: { email: 'x@test.com', password: VALID_PASSWORD },
+      csrf: 'definitely-wrong',
+    });
     assert.equal(res.status, 403);
     assert.match(res.body.message, /CSRF/i);
   });
 
   test('POST with missing CSRF cookie/header is rejected', async () => {
     // bare request: no cookies at all -> no csrf cookie to compare
-    const res = await api(
-      'POST',
-      '/api/auth/login',
-      {
-        body: { email: 'x@test.com', password: VALID_PASSWORD },
-        bare: true,
-      }
-    );
+    const res = await api('POST', '/api/auth/login', {
+      body: { email: 'x@test.com', password: VALID_PASSWORD },
+      bare: true,
+    });
     assert.equal(res.status, 403);
   });
 
@@ -304,9 +288,10 @@ describe('Password policy', () => {
       'NoDigitsHere',
       'nouppercase123',
     ]) {
-      const res = await registerViaApi(`weak${Math.random()
-        .toString(36)
-        .slice(2, 8)}@test.com`, weak);
+      const res = await registerViaApi(
+        `weak${Math.random().toString(36).slice(2, 8)}@test.com`,
+        weak
+      );
       assert.equal(res.status, 400, weak);
     }
   });
@@ -387,9 +372,7 @@ describe('Authorization', () => {
     assert.equal(res.body.data.password, undefined);
     assert.equal(res.body.data.passwordHash, undefined);
 
-    const created = await User.findOne({ email: 'madestaff@test.com' }).select(
-      '+password'
-    );
+    const created = await User.findOne({ email: 'madestaff@test.com' }).select('+password');
     assert.equal(created.role, 'staff');
     assert.ok(created.password.startsWith('$2'));
   });
@@ -446,15 +429,13 @@ describe('Issue management and scoping', () => {
 
   test('student list contains only own issues', async () => {
     await loginAs('stu_b@test.com');
-    await createIssue("Other student issue");
+    await createIssue('Other student issue');
 
     await loginAs('stu_a@test.com');
     const res = await api('GET', '/api/issues?limit=50');
     assert.equal(res.status, 200);
     assert.ok(res.body.data.length >= 1);
-    assert.ok(
-      res.body.data.every((i) => i.reportedBy?.email === 'stu_a@test.com')
-    );
+    assert.ok(res.body.data.every((i) => i.reportedBy?.email === 'stu_a@test.com'));
   });
 
   test("student cannot view another student's issue", async () => {
@@ -493,11 +474,9 @@ describe('Issue management and scoping', () => {
     assert.equal(forbidden.status, 403);
 
     await loginAs('staff_w@test.com');
-    const staffAssign = await api(
-      'PATCH',
-      `/api/issues/${issueId}/assign`,
-      { body: { staffId: staffUserId } }
-    );
+    const staffAssign = await api('PATCH', `/api/issues/${issueId}/assign`, {
+      body: { staffId: staffUserId },
+    });
     assert.equal(staffAssign.status, 403);
 
     const progress = await api('PATCH', `/api/issues/${issueId}/status`, {
@@ -568,9 +547,7 @@ describe('Pagination, filtering and search', () => {
     const res = await api('GET', '/api/issues?limit=50');
     assert.equal(res.status, 200);
     assert.equal(res.body.pagination.totalItems, 12);
-    assert.ok(
-      res.body.data.every((i) => i.reportedBy?.email === 'stu_p@test.com')
-    );
+    assert.ok(res.body.data.every((i) => i.reportedBy?.email === 'stu_p@test.com'));
     await loginAs('admin_p@test.com');
   });
 
@@ -579,30 +556,18 @@ describe('Pagination, filtering and search', () => {
     assert.equal(last.status, 200);
     assert.equal(last.body.data.length, 0);
 
-    for (const bad of [
-      'page=0',
-      'page=-1',
-      'page=abc',
-      'limit=0',
-      'limit=101',
-    ]) {
+    for (const bad of ['page=0', 'page=-1', 'page=abc', 'limit=0', 'limit=101']) {
       const res = await api('GET', `/api/issues?${bad}`);
       assert.equal(res.status, 400, bad);
     }
   });
 
   test('status, priority and category filters combine', async () => {
-    const res = await api(
-      'GET',
-      '/api/issues?status=reported&priority=high&category=it&limit=50'
-    );
+    const res = await api('GET', '/api/issues?status=reported&priority=high&category=it&limit=50');
     assert.equal(res.status, 200);
     assert.ok(
       res.body.data.every(
-        (i) =>
-          i.status === 'reported' &&
-          i.priority === 'high' &&
-          i.category === 'it'
+        (i) => i.status === 'reported' && i.priority === 'high' && i.category === 'it'
       )
     );
   });
@@ -624,23 +589,14 @@ describe('Pagination, filtering and search', () => {
     const list = await api('GET', '/api/issues?limit=1');
     const ticketId = list.body.data[0].ticketId;
 
-    const byTicket = await api(
-      'GET',
-      `/api/issues?search=${encodeURIComponent(ticketId)}`
-    );
+    const byTicket = await api('GET', `/api/issues?search=${encodeURIComponent(ticketId)}`);
     assert.equal(byTicket.body.data.length, 1);
     assert.equal(byTicket.body.data[0].ticketId, ticketId);
 
-    const byText = await api(
-      'GET',
-      `/api/issues?search=${encodeURIComponent('Page issue')}`
-    );
+    const byText = await api('GET', `/api/issues?search=${encodeURIComponent('Page issue')}`);
     assert.ok(byText.body.pagination.totalItems >= 12);
 
-    const regexAttempt = await api(
-      'GET',
-      `/api/issues?search=${encodeURIComponent('(.*')}`
-    );
+    const regexAttempt = await api('GET', `/api/issues?search=${encodeURIComponent('(.*')}`);
     assert.equal(regexAttempt.status, 200);
     assert.equal(regexAttempt.body.data.length, 0);
   });
@@ -755,18 +711,13 @@ describe('Staff self-registration approval', () => {
 
     const list = await api('GET', '/api/admin/users?role=staff&status=pending');
     assert.equal(list.status, 200);
-    const pending = list.body.data.users.find(
-      (u) => u.email === 'pendingstaff@test.com'
-    );
+    const pending = list.body.data.users.find((u) => u.email === 'pendingstaff@test.com');
     assert.ok(pending);
     assert.equal(pending.staffId, 'STF-900');
     assert.equal(pending.department, 'IT');
 
     // Approve
-    const approve = await api(
-      'PATCH',
-      `/api/admin/staff/${pending.id}/approve`
-    );
+    const approve = await api('PATCH', `/api/admin/staff/${pending.id}/approve`);
     assert.equal(approve.status, 200);
     assert.equal(approve.body.data.status, 'active');
 
@@ -812,15 +763,10 @@ describe('Staff self-registration approval', () => {
     await loginAs('admin_rej@test.com');
 
     const users = await api('GET', '/api/admin/users?role=staff&status=pending');
-    const target = users.body.data.users.find(
-      (u) => u.email === 'rejectedstaff@test.com'
-    );
+    const target = users.body.data.users.find((u) => u.email === 'rejectedstaff@test.com');
     assert.ok(target);
 
-    const reject = await api(
-      'PATCH',
-      `/api/admin/staff/${target.id}/reject`
-    );
+    const reject = await api('PATCH', `/api/admin/staff/${target.id}/reject`);
     assert.equal(reject.status, 200);
     assert.equal(reject.body.data.status, 'rejected');
 
@@ -838,10 +784,7 @@ describe('Staff self-registration approval', () => {
     const list = await api('GET', '/api/admin/users');
     assert.equal(list.status, 403);
 
-    const approve = await api(
-      'PATCH',
-      '/api/admin/staff/000000000000000000000000/approve'
-    );
+    const approve = await api('PATCH', '/api/admin/staff/000000000000000000000000/approve');
     assert.equal(approve.status, 403);
   });
 });

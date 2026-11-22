@@ -15,9 +15,7 @@ export default function EmptyState({
         <Icon className="w-8 h-8" />
       </div>
       <h3 className="text-lg font-bold text-purple-950 mb-1">{title}</h3>
-      <p className="text-sm text-purple-900/70 max-w-sm mb-6 leading-relaxed">
-        {description}
-      </p>
+      <p className="text-sm text-purple-900/70 max-w-sm mb-6 leading-relaxed">{description}</p>
 
       <div className="flex items-center gap-3">
         {actionLabel && onAction && (

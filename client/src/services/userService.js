@@ -19,15 +19,11 @@ export const getUsers = async ({ role, status, page, limit } = {}) => {
 };
 
 export const approveStaff = async (userId) => {
-  const response = await apiClient.patch(
-    `/admin/staff/${userId}/approve`
-  );
+  const response = await apiClient.patch(`/admin/staff/${userId}/approve`);
   return response.data;
 };
 
 export const rejectStaff = async (userId) => {
-  const response = await apiClient.patch(
-    `/admin/staff/${userId}/reject`
-  );
+  const response = await apiClient.patch(`/admin/staff/${userId}/reject`);
   return response.data;
 };

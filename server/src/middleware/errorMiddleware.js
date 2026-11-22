@@ -1,4 +1,3 @@
-
 import ApiError from '../utils/ApiError.js';
 
 const errorMiddleware = (err, req, res, next) => {
@@ -8,10 +7,7 @@ const errorMiddleware = (err, req, res, next) => {
 
   // Convert unknown errors into ApiError
   if (!isOperationalError) {
-    error = new ApiError(
-      error.statusCode || 500,
-      error.message || 'Internal Server Error'
-    );
+    error = new ApiError(error.statusCode || 500, error.message || 'Internal Server Error');
   }
 
   const statusCode = error.statusCode || 500;
@@ -32,7 +28,7 @@ const errorMiddleware = (err, req, res, next) => {
     console.error(
       `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${statusCode}: ${error.message}`
     );
-    console.error((originalError.stack || error.stack));
+    console.error(originalError.stack || error.stack);
   }
 
   res.status(statusCode).json({

@@ -75,7 +75,8 @@ export default function LoginPage() {
           <div>
             <h2>Report. Track. Resolve.</h2>
             <p>
-              CampusFix connects students, staff technicians, and campus administrators so every campus facility issue gets resolved swiftly.
+              CampusFix connects students, staff technicians, and campus administrators so every
+              campus facility issue gets resolved swiftly.
             </p>
 
             <div className="auth-showcase-features">
@@ -103,14 +104,18 @@ export default function LoginPage() {
           <div className="auth-card">
             <div className="auth-heading">
               <h1 className="text-purple-950 font-black">Welcome back!</h1>
-              <p className="text-purple-800 font-medium">Sign in to continue to your CampusFix portal.</p>
+              <p className="text-purple-800 font-medium">
+                Sign in to continue to your CampusFix portal.
+              </p>
             </div>
 
             {error && <div className="error-message">{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="email" className="text-purple-950 font-bold">Email address</label>
+                <label htmlFor="email" className="text-purple-950 font-bold">
+                  Email address
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <Mail size={18} className="text-purple-500" />
                   <input
@@ -127,7 +132,9 @@ export default function LoginPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="password" className="text-purple-950 font-bold">Password</label>
+                <label htmlFor="password" className="text-purple-950 font-bold">
+                  Password
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <LockKeyhole size={18} className="text-purple-500" />
                   <input

@@ -6,9 +6,7 @@ class UserController {
     try {
       const user = await userService.createStaff(req.body);
 
-      res.status(201).json(
-        new ApiResponse(201, 'Staff account created successfully', user)
-      );
+      res.status(201).json(new ApiResponse(201, 'Staff account created successfully', user));
     } catch (error) {
       next(error);
     }
@@ -25,9 +23,7 @@ class UserController {
         limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
       });
 
-      res.status(200).json(
-        new ApiResponse(200, 'Users retrieved successfully', result)
-      );
+      res.status(200).json(new ApiResponse(200, 'Users retrieved successfully', result));
     } catch (error) {
       next(error);
     }
@@ -37,9 +33,7 @@ class UserController {
     try {
       const user = await userService.approveStaff(req.params.id);
 
-      res.status(200).json(
-        new ApiResponse(200, 'Staff member approved', user)
-      );
+      res.status(200).json(new ApiResponse(200, 'Staff member approved', user));
     } catch (error) {
       next(error);
     }
@@ -49,9 +43,7 @@ class UserController {
     try {
       const user = await userService.rejectStaff(req.params.id);
 
-      res.status(200).json(
-        new ApiResponse(200, 'Staff registration rejected', user)
-      );
+      res.status(200).json(new ApiResponse(200, 'Staff registration rejected', user));
     } catch (error) {
       next(error);
     }

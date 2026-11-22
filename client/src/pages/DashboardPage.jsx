@@ -70,6 +70,10 @@ export default function DashboardPage() {
     };
 
     fetchDashboard();
+
+    // Auto-refresh dashboard data every 30 seconds.
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
   }, [user?.role]);
 
   const greeting = useMemo(() => {
@@ -139,7 +143,8 @@ export default function DashboardPage() {
               {greeting}, {user?.fullName || 'Student'}!
             </h1>
             <p className="text-purple-100 text-sm sm:text-base leading-relaxed max-w-xl">
-              Track maintenance tickets across lecture halls, labs, and dorms. Report new issues in seconds and follow live progress.
+              Track maintenance tickets across lecture halls, labs, and dorms. Report new issues in
+              seconds and follow live progress.
             </p>
           </div>
 
@@ -199,7 +204,9 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-purple-100">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-extrabold text-purple-950 tracking-tight">Recent Issues</h2>
+              <h2 className="text-xl font-extrabold text-purple-950 tracking-tight">
+                Recent Issues
+              </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                 {recentIssues.length} Latest
               </span>

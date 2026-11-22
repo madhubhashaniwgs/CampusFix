@@ -1,4 +1,3 @@
-
 .my-issues-page {
   min-height: 100vh;
   background: #f5f3ff;
@@ -212,7 +211,9 @@
   padding: 21px;
   border: 1px solid #e9e2f8;
   border-radius: 12px;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 
 .issue-card:hover {

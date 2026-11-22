@@ -1,4 +1,3 @@
-
 import apiClient from './apiClient';
 
 // Create a new issue
@@ -19,9 +18,7 @@ export const getIssues = async (params = {}) => {
   });
 
   const queryString = query.toString();
-  const response = await apiClient.get(
-    `/issues${queryString ? `?${queryString}` : ''}`
-  );
+  const response = await apiClient.get(`/issues${queryString ? `?${queryString}` : ''}`);
   return response.data;
 };
 
@@ -50,20 +47,14 @@ export const getStaffMembers = async ({ page, limit } = {}) => {
 
 // Assign issue to a staff member (Admin only)
 export const assignIssue = async (issueId, staffId) => {
-  const response = await apiClient.patch(
-    `/issues/${issueId}/assign`,
-    { staffId }
-  );
+  const response = await apiClient.patch(`/issues/${issueId}/assign`, { staffId });
 
   return response.data;
 };
 
 // Update issue status (Staff / Admin)
 export const updateIssueStatus = async (issueId, status, note = '') => {
-  const response = await apiClient.patch(
-    `/issues/${issueId}/status`,
-    { status, note }
-  );
+  const response = await apiClient.patch(`/issues/${issueId}/status`, { status, note });
 
   return response.data;
 };

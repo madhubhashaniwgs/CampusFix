@@ -108,10 +108,7 @@ class UserService {
       throw new ApiError(400, 'User is not a staff member');
     }
 
-    const updated = await userRepository.setUserStatus(
-      userId,
-      'rejected'
-    );
+    const updated = await userRepository.setUserStatus(userId, 'rejected');
 
     return {
       id: updated._id,

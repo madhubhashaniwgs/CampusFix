@@ -28,17 +28,10 @@ class AuthService {
       role,
       status: role === 'staff' ? 'pending' : 'active',
       studentId:
-        role === 'student' && userData.studentId
-          ? String(userData.studentId).trim()
-          : null,
-      staffId:
-        role === 'staff' && userData.staffId
-          ? String(userData.staffId).trim()
-          : null,
+        role === 'student' && userData.studentId ? String(userData.studentId).trim() : null,
+      staffId: role === 'staff' && userData.staffId ? String(userData.staffId).trim() : null,
       department:
-        role === 'staff' && userData.department
-          ? String(userData.department).trim()
-          : null,
+        role === 'staff' && userData.department ? String(userData.department).trim() : null,
     });
 
     const token = generateToken(user._id, user.tokenVersion ?? 0);
@@ -71,23 +64,14 @@ class AuthService {
     // Staff accounts created via public registration stay blocked
     // until an admin approves them.
     if (user.role === 'staff' && user.status === 'pending') {
-      throw new ApiError(
-        403,
-        'Your staff account is pending admin approval.'
-      );
+      throw new ApiError(403, 'Your staff account is pending admin approval.');
     }
 
     if (user.role === 'staff' && user.status === 'rejected') {
-      throw new ApiError(
-        403,
-        'Your staff registration request was rejected.'
-      );
+      throw new ApiError(403, 'Your staff registration request was rejected.');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       throw new ApiError(401, 'Invalid email or password');
@@ -145,10 +129,7 @@ class AuthService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    const updated = await userRepository.updatePasswordAndBumpVersion(
-      userId,
-      hashedPassword
-    );
+    const updated = await userRepository.updatePasswordAndBumpVersion(userId, hashedPassword);
 
     return {
       user: {
