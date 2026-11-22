@@ -538,3 +538,154 @@ a {
     width: 100%;
   }
 }
+
+/* Student dashboard stats & recent issues */
+
+.student-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 30px 0;
+}
+
+.student-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #eee9fa;
+  border-radius: 14px;
+  box-shadow: 0 4px 15px rgba(76, 29, 149, 0.04);
+}
+
+.student-stat-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 11px;
+}
+
+.student-stat-icon.purple { color: #7c3aed; background: #ede9fe; }
+.student-stat-icon.orange { color: #ea580c; background: #ffedd5; }
+.student-stat-icon.indigo { color: #4f46e5; background: #e0e7ff; }
+.student-stat-icon.green { color: #059669; background: #d1fae5; }
+
+.student-stat-card span {
+  display: block;
+  color: #817991;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.student-stat-card strong {
+  color: #24143f;
+  font-size: 24px;
+}
+
+.recent-issues-card {
+  max-width: none;
+}
+
+.recent-issues-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.recent-issues-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.view-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  color: #6d28d9;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-all-link:hover {
+  color: #4c1d95;
+  text-decoration: underline;
+}
+
+.recent-issue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 4px;
+  border: none;
+  border-bottom: 1px solid #f0edf5;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-issue-row:last-child {
+  border-bottom: none;
+}
+
+.recent-issue-row:hover .recent-issue-info strong {
+  color: #6d28d9;
+}
+
+.recent-issue-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.recent-issue-info strong {
+  color: #372751;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.recent-issue-info span {
+  color: #a89dbd;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-pill {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill.reported { color: #c2410c; background: #ffedd5; }
+.status-pill.assigned { color: #1d4ed8; background: #dbeafe; }
+.status-pill.in_progress { color: #4338ca; background: #e0e7ff; }
+.status-pill.resolved { color: #047857; background: #d1fae5; }
+.status-pill.rejected { color: #b91c1c; background: #fee2e2; }
+
+@media (max-width: 800px) {
+  .student-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .student-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

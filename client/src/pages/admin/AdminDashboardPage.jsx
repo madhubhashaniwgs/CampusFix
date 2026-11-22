@@ -187,6 +187,19 @@ function AdminDashboardPage() {
           </div>
         )}
 
+        {!loading && statusCounts.reported > 0 && (
+          <div className="admin-unassigned-alert">
+            <p>
+              <strong>{statusCounts.reported}</strong> issue
+              {statusCounts.reported === 1 ? '' : 's'} waiting to be
+              assigned
+            </p>
+            <button onClick={() => navigate('/admin/issues')}>
+              Review &amp; Assign
+            </button>
+          </div>
+        )}
+
         <section className="admin-statistics-section">
           <div className="admin-section-heading">
             <h2>Overview</h2>
