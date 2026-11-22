@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 
 import authRoutes from './routes/authRoutes.js';
 import notFoundMiddleware from './middleware/notFoundMiddleware.js';
@@ -8,9 +9,26 @@ import ApiResponse from './utils/ApiResponse.js';
 import issueRoutes from './routes/issueRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+const allowedOrigins = (process.env.CLIENT_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const app = express();
 
-app.use(cors());
+app.use(helmet());
+
+// In development all origins are allowed for local convenience.
+// In production only the origins listed in CLIENT_ORIGINS may connect.
+app.use(
+  cors(
+    isProduction
+      ? { origin: allowedOrigins }
+      : {}
+  )
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

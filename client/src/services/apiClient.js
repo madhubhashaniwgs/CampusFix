@@ -22,4 +22,37 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Handle expired or invalid sessions consistently.
+// Auth endpoints are excluded so failed login/register attempts
+// (which legitimately return 401/400) do not trigger a redirect.
+let isRedirectingToLogin = false;
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+    const isAuthRequest =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register');
+
+    if (status === 401 && !isAuthRequest) {
+      localStorage.removeItem('campusfix_token');
+
+      const path = window.location.pathname;
+      const onAuthPage =
+        path.startsWith('/login') || path.startsWith('/register');
+
+      // Guard prevents repeated navigations when several requests
+      // fail with 401 at the same time.
+      if (!onAuthPage && !isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        window.location.href = '/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;
