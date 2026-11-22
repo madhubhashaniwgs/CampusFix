@@ -7,10 +7,12 @@ export const createStaffMember = async (staffData) => {
 };
 
 // Admin user management
-export const getUsers = async ({ role, status } = {}) => {
+export const getUsers = async ({ role, status, page, limit } = {}) => {
   const params = {};
   if (role) params.role = role;
   if (status) params.status = status;
+  if (page) params.page = page;
+  if (limit) params.limit = limit;
 
   const response = await apiClient.get('/admin/users', { params });
   return response.data;

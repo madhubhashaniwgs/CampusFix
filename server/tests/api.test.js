@@ -755,7 +755,7 @@ describe('Staff self-registration approval', () => {
 
     const list = await api('GET', '/api/admin/users?role=staff&status=pending');
     assert.equal(list.status, 200);
-    const pending = list.body.data.find(
+    const pending = list.body.data.users.find(
       (u) => u.email === 'pendingstaff@test.com'
     );
     assert.ok(pending);
@@ -812,7 +812,7 @@ describe('Staff self-registration approval', () => {
     await loginAs('admin_rej@test.com');
 
     const users = await api('GET', '/api/admin/users?role=staff&status=pending');
-    const target = users.body.data.find(
+    const target = users.body.data.users.find(
       (u) => u.email === 'rejectedstaff@test.com'
     );
     assert.ok(target);

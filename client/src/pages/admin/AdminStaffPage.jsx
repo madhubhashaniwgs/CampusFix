@@ -37,7 +37,15 @@ export default function AdminStaffPage() {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
 
+  const PAGE_SIZE = 10;
+
   const [staffMembers, setStaffMembers] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 0,
+  });
   const [pendingStaff, setPendingStaff] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -46,15 +54,23 @@ export default function AdminStaffPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchStaff = async () => {
+  const fetchStaff = async (targetPage = 1) => {
     try {
       setLoading(true);
       const [staffRes, pendingRes] = await Promise.all([
-        getStaffMembers(),
-        getUsers({ role: 'staff', status: 'pending' }),
+        getStaffMembers({ page: targetPage, limit: PAGE_SIZE }),
+        getUsers({ role: 'staff', status: 'pending', limit: 100 }),
       ]);
-      setStaffMembers(staffRes.data || []);
-      setPendingStaff(pendingRes.data || []);
+      setStaffMembers(staffRes.data?.staff || []);
+      setPagination(
+        staffRes.data?.pagination || {
+          page: targetPage,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 0,
+        }
+      );
+      setPendingStaff(pendingRes.data?.users || []);
     } catch (err) {
       toastError(err.response?.data?.message || 'Unable to load staff directory.');
     } finally {
@@ -62,8 +78,12 @@ export default function AdminStaffPage() {
     }
   };
 
+  const goToPage = (p) => {
+    if (p >= 1 && p <= pagination.totalPages) fetchStaff(p);
+  };
+
   useEffect(() => {
-    fetchStaff();
+    fetchStaff(1);
   }, []);
 
   const handleChange = (e) => {
@@ -94,7 +114,7 @@ export default function AdminStaffPage() {
       success(`Staff account for ${formData.fullName} created successfully!`, 'Account Created');
       setFormData(emptyForm);
       setModalOpen(false);
-      await fetchStaff();
+      await fetchStaff(pagination.page);
     } catch (err) {
       toastError(
         err.response?.data?.message ||
@@ -109,7 +129,7 @@ export default function AdminStaffPage() {
     try {
       await approveStaff(member.id);
       success(`${member.fullName} approved and can now sign in.`, 'Staff Approved');
-      await fetchStaff();
+      await fetchStaff(pagination.page);
     } catch (err) {
       toastError(err.response?.data?.message || 'Unable to approve staff member.');
     }
@@ -119,7 +139,7 @@ export default function AdminStaffPage() {
     try {
       await rejectStaff(member.id);
       success(`${member.fullName}'s registration was rejected.`, 'Registration Rejected');
-      await fetchStaff();
+      await fetchStaff(pagination.page);
     } catch (err) {
       toastError(err.response?.data?.message || 'Unable to reject staff member.');
     }
@@ -404,7 +424,7 @@ export default function AdminStaffPage() {
 
             return (
               <div
-                key={staff._id}
+                key={staff.id || staff._id}
                 className="purple-card rounded-3xl p-6 flex flex-col justify-between"
               >
                 <div>
@@ -452,6 +472,44 @@ export default function AdminStaffPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs font-semibold text-purple-900/70">
+            Showing{' '}
+            <strong className="text-purple-950">
+              {(pagination.page - 1) * PAGE_SIZE + 1}
+            </strong>{' '}
+            to{' '}
+            <strong className="text-purple-950">
+              {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
+            </strong>{' '}
+            of <strong className="text-purple-950">{pagination.totalItems}</strong>{' '}
+            staff members
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-black text-purple-950">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </AppLayout>

@@ -86,13 +86,18 @@ class IssueController {
 
     getStaffMembers = async (req, res, next) => {
     try {
-        const staff = await issueService.getStaffMembers();
+        const { page, limit } = req.query;
+
+        const result = await issueService.getStaffMembers({
+            page: Math.max(1, parseInt(page, 10) || 1),
+            limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
+        });
 
         res.status(200).json(
         new ApiResponse(
             200,
             'Staff members retrieved successfully',
-            staff
+            result
         )
         );
     } catch (error) {

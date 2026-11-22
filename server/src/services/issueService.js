@@ -196,8 +196,25 @@ class IssueService {
     );
   }
 
-    async getStaffMembers() {
-    return issueRepository.findStaffMembers();
+    async getStaffMembers({ page = 1, limit = 10 } = {}) {
+    const { staff, totalItems } =
+        await issueRepository.findStaffMembers({ page, limit });
+
+    return {
+        staff: staff.map((s) => ({
+            id: s._id,
+            fullName: s.fullName,
+            email: s.email,
+            staffId: s.staffId || null,
+            department: s.department || null,
+        })),
+        pagination: {
+            page,
+            pageSize: limit,
+            totalItems,
+            totalPages: Math.ceil(totalItems / limit),
+        },
+    };
     }
 
     async assignIssue(issueId, staffId, adminId) {

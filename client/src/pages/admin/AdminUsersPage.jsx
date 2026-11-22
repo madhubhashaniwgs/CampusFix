@@ -38,21 +38,39 @@ const statusBadgeClass = {
 export default function AdminUsersPage() {
   const { error: toastError } = useToast();
 
+  const PAGE_SIZE = 10;
+
   const [users, setUsers] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (targetPage = 1) => {
     try {
       setLoading(true);
       const res = await getUsers({
         role: roleFilter || undefined,
         status: statusFilter || undefined,
+        page: targetPage,
+        limit: PAGE_SIZE,
       });
-      setUsers(res.data || []);
+      setUsers(res.data?.users || []);
+      setPagination(
+        res.data?.pagination || {
+          page: targetPage,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 0,
+        }
+      );
     } catch (err) {
       toastError(
         err.response?.data?.message || 'Unable to load users.'
@@ -63,9 +81,13 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter, statusFilter]);
+
+  const goToPage = (p) => {
+    if (p >= 1 && p <= pagination.totalPages) fetchUsers(p);
+  };
 
   const filteredUsers = users.filter((u) => {
     const term = searchTerm.toLowerCase();
@@ -100,7 +122,7 @@ export default function AdminUsersPage() {
         </div>
 
         <button
-          onClick={fetchUsers}
+          onClick={() => fetchUsers(pagination.page)}
           className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
           title="Refresh"
         >
@@ -254,6 +276,44 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs font-semibold text-purple-900/70">
+            Showing{' '}
+            <strong className="text-purple-950">
+              {(pagination.page - 1) * PAGE_SIZE + 1}
+            </strong>{' '}
+            to{' '}
+            <strong className="text-purple-950">
+              {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
+            </strong>{' '}
+            of <strong className="text-purple-950">{pagination.totalItems}</strong>{' '}
+            users
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-black text-purple-950">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* User Detail Modal */}
       {selectedUser && (

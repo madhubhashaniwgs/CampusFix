@@ -16,12 +16,17 @@ class UserController {
 
   listUsers = async (req, res, next) => {
     try {
-      const { role, status } = req.query;
+      const { role, status, page, limit } = req.query;
 
-      const users = await userService.listUsers({ role, status });
+      const result = await userService.listUsers({
+        role,
+        status,
+        page: Math.max(1, parseInt(page, 10) || 1),
+        limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
+      });
 
       res.status(200).json(
-        new ApiResponse(200, 'Users retrieved successfully', users)
+        new ApiResponse(200, 'Users retrieved successfully', result)
       );
     } catch (error) {
       next(error);

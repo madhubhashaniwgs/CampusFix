@@ -76,7 +76,7 @@ export default function AdminDashboardPage() {
       ]);
 
       setIssues(issuesRes.data || []);
-      setStaffMembers(staffRes.data || []);
+      setStaffMembers(staffRes.data?.staff || staffRes.data || []);
       setCounts({
         total,
         reported,

@@ -44,22 +44,35 @@ class UserService {
     };
   }
 
-  async listUsers({ role, status } = {}) {
-    const users = await userRepository.findUsers({ role, status });
+  async listUsers({ role, status, page = 1, limit = 10 } = {}) {
+    const { users, totalItems } = await userRepository.findUsers({
+      role,
+      status,
+      page,
+      limit,
+    });
 
-    return users.map((u) => ({
-      id: u._id,
-      fullName: u.fullName,
-      email: u.email,
-      role: u.role,
-      // Pre-migration users have no status field; treat as active.
-      status: u.status || 'active',
-      studentId: u.studentId || null,
-      staffId: u.staffId || null,
-      department: u.department || null,
-      isActive: u.isActive,
-      createdAt: u.createdAt,
-    }));
+    return {
+      users: users.map((u) => ({
+        id: u._id,
+        fullName: u.fullName,
+        email: u.email,
+        role: u.role,
+        // Pre-migration users have no status field; treat as active.
+        status: u.status || 'active',
+        studentId: u.studentId || null,
+        staffId: u.staffId || null,
+        department: u.department || null,
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+      })),
+      pagination: {
+        page,
+        pageSize: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async approveStaff(userId) {

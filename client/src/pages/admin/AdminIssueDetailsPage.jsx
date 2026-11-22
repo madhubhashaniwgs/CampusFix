@@ -66,7 +66,7 @@ export default function AdminIssueDetailsPage() {
       setIssue(issueData);
       setSelectedStatus(issueData?.status || 'in_progress');
       setSelectedStaffId(issueData?.assignedTo?._id || '');
-      setStaffMembers(staffRes.data || []);
+      setStaffMembers(staffRes.data?.staff || staffRes.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to load issue details.');
     } finally {
@@ -83,7 +83,9 @@ export default function AdminIssueDetailsPage() {
     try {
       setAssigning(true);
       await assignIssue(id, selectedStaffId);
-      const staffObj = staffMembers.find((s) => s._id === selectedStaffId);
+      const staffObj = staffMembers.find(
+        (s) => (s.id || s._id) === selectedStaffId
+      );
       success(
         `Assigned to ${staffObj?.fullName || 'Technician'} successfully!`,
         'Staff Assigned'
@@ -267,7 +269,10 @@ export default function AdminIssueDetailsPage() {
                   >
                     <option value="">-- Choose Staff Technician --</option>
                     {staffMembers.map((staff) => (
-                      <option key={staff._id} value={staff._id}>
+                      <option
+                        key={staff.id || staff._id}
+                        value={staff.id || staff._id}
+                      >
                         {staff.fullName} ({staff.email})
                       </option>
                     ))}

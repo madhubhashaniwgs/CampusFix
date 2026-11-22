@@ -55,13 +55,26 @@ class IssueRepository {
       .populate('statusHistory.updatedBy', 'fullName');
   }
 
-  async findStaffMembers() {
-    return User.find({
+  async findStaffMembers({ page = 1, limit = 10 } = {}) {
+    const filter = {
         role: 'staff',
         isActive: true,
         // Treat missing status (pre-migration docs) as active.
         $or: [{ status: 'active' }, { status: { $exists: false } }],
-    }).select('fullName email');
+    };
+
+    const skip = (page - 1) * limit;
+
+    const [staff, totalItems] = await Promise.all([
+      User.find(filter)
+        .select('fullName email staffId department createdAt')
+        .sort({ fullName: 1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
+
+    return { staff, totalItems };
  }
 
     async assignStaff(issueId, staffId, adminId, note) {

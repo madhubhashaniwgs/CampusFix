@@ -31,8 +31,8 @@ class UserRepository {
     }).select('fullName email');
   }
 
-  // Admin user management: filterable user listing.
-  async findUsers({ role, status } = {}) {
+  // Admin user management: paginated, filterable user listing.
+  async findUsers({ role, status, page = 1, limit = 10 } = {}) {
     const filter = {};
 
     if (role) filter.role = role;
@@ -43,11 +43,20 @@ class UserRepository {
       filter.status = status;
     }
 
-    return User.find(filter)
-      .select(
-        'fullName email role status studentId staffId department isActive createdAt'
-      )
-      .sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+
+    const [users, totalItems] = await Promise.all([
+      User.find(filter)
+        .select(
+          'fullName email role status studentId staffId department isActive createdAt'
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
+
+    return { users, totalItems };
   }
 
   async findStaffById(userId) {

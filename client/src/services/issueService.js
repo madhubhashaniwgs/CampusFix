@@ -39,8 +39,12 @@ export const getIssueById = async (issueId) => {
 };
 
 // Get available staff members (Admin only)
-export const getStaffMembers = async () => {
-  const response = await apiClient.get('/issues/staff');
+export const getStaffMembers = async ({ page, limit } = {}) => {
+  const params = {};
+  if (page) params.page = page;
+  if (limit) params.limit = limit;
+
+  const response = await apiClient.get('/issues/staff', { params });
   return response.data;
 };
 
