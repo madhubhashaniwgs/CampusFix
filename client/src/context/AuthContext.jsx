@@ -41,9 +41,6 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     const response = await registerUser(userData);
 
-    sessionStorage.setItem(SESSION_HINT_KEY, '1');
-    setUser(response.data.user);
-
     return response;
   };
 

@@ -92,8 +92,9 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     try {
-      const { confirmPassword, ...userData } = formData;
-      const response = await register(userData);
+      const userData = { ...formData };
+      delete userData.confirmPassword;
+      await register(userData);
 
       if (formData.role === 'staff') {
         success(
@@ -104,8 +105,8 @@ export default function RegisterPage() {
         return;
       }
 
-      success(`Welcome to CampusFix, ${response.data.user.fullName}!`, 'Account Created');
-      navigate('/student/dashboard', { replace: true });
+      success(`Account created! Please log in to continue.`, 'Account Created');
+      navigate('/login', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Unable to create your account. Please try again.';
       setError(msg);
