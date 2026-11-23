@@ -34,7 +34,6 @@ import {
 } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
 import { useRealtimeRefresh } from '../../hooks/useRealtime';
-import AnalyticsCharts from '../../components/admin/AnalyticsCharts';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -169,8 +168,6 @@ export default function AdminDashboardPage() {
 
   return (
     <AppLayout activeNav="dashboard">
-      <AnalyticsCharts />
-
       <ImageModal
         isOpen={activePhoto.isOpen}
         src={activePhoto.src}
