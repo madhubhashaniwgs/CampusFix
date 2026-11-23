@@ -14,4 +14,12 @@ router.post(
   userController.createStaff
 );
 
+router.post(
+  '/admin',
+  authenticate,
+  authorize('admin'),
+  validateCreateStaff,
+  userController.createAdmin
+);
+
 export default router;

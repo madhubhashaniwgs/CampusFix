@@ -2229,3 +2229,28 @@ describe('Bearer token authentication fallback', () => {
     assert.equal(bad.status, 401);
   });
 });
+
+describe('Admin account creation', () => {
+  test('admin can create another admin; staff/student cannot', async () => {
+    await createUserDirect({ email: 'adm_create@test.com', role: 'admin' });
+    await loginAs('adm_create@test.com');
+    const res = await api('POST', '/api/users/admin', {
+      body: {
+        fullName: 'Second Admin',
+        email: 'adm_second@test.com',
+        password: VALID_PASSWORD,
+      },
+    });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.role, 'admin');
+
+    await createUserDirect({ email: 'stu_noperm@test.com', role: 'student' });
+    await loginAs('stu_noperm@test.com');
+    assert.equal(
+      (await api('POST', '/api/users/admin', {
+        body: { fullName: 'X', email: 'x2@test.com', password: VALID_PASSWORD },
+      })).status,
+      403
+    );
+  });
+});

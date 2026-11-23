@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Users,
   Search,
   X,
   RefreshCw,
@@ -8,11 +7,15 @@ import {
   GraduationCap,
   Briefcase,
   ShieldCheck,
+  UserPlus,
+  Mail,
+  LockKeyhole,
 } from 'lucide-react';
 
 import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
-import { getUsers } from '../../services/userService';
+import { getUsers, createAdminMember } from '../../services/userService';
+import StaffManagementPanel from '../../components/admin/StaffManagementPanel';
 import { useToast } from '../../context/ToastContext';
 
 const ROLE_FILTERS = [
@@ -36,7 +39,8 @@ const statusBadgeClass = {
 };
 
 export default function AdminUsersPage() {
-  const { error: toastError } = useToast();
+  const [activeTab, setActiveTab] = useState('staff');
+  const { error: toastError, success: toastSuccess } = useToast();
 
   const PAGE_SIZE = 10;
 
@@ -52,6 +56,14 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminForm, setAdminForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const fetchUsers = async (targetPage = 1) => {
     try {
@@ -82,6 +94,34 @@ export default function AdminUsersPage() {
     fetchUsers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter, statusFilter]);
+
+  const handleCreateAdmin = async (e) => {
+    e.preventDefault();
+    if (adminForm.password !== adminForm.confirmPassword) {
+      toastError('Passwords do not match.');
+      return;
+    }
+    if (adminForm.password.length < 6) {
+      toastError('Password must be at least 6 characters.');
+      return;
+    }
+    try {
+      setAdminSubmitting(true);
+      await createAdminMember({
+        fullName: adminForm.fullName.trim(),
+        email: adminForm.email.trim().toLowerCase(),
+        password: adminForm.password,
+      });
+      toastSuccess(`Admin account for ${adminForm.fullName} created successfully!`);
+      setAdminForm({ fullName: '', email: '', password: '', confirmPassword: '' });
+      setAdminModalOpen(false);
+      fetchUsers(pagination.page);
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to create admin account.');
+    } finally {
+      setAdminSubmitting(false);
+    }
+  };
 
   const goToPage = (p) => {
     if (p >= 1 && p <= pagination.totalPages) fetchUsers(p);
@@ -119,257 +159,388 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => fetchUsers(pagination.page)}
-          className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
-          title="Refresh"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="purple-card rounded-3xl p-4 sm:p-5 mb-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, email, ID, or department..."
-            className="w-full pl-9 pr-8 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-medium text-purple-950 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none transition-all placeholder:text-purple-400"
-          />
-          {searchTerm && (
+        {activeTab === 'all' && (
+          <div className="flex items-center gap-3 self-start">
             <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-700"
+              onClick={() => setAdminModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/25 transition-all"
             >
-              <X className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
+              Add Admin
             </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-950 focus:border-purple-600 outline-none"
-          >
-            {ROLE_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-950 focus:border-purple-600 outline-none"
-          >
-            {STATUS_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="purple-card rounded-3xl overflow-hidden">
-        {loading ? (
-          <div className="py-20 text-center">
-            <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-purple-900/70 font-semibold">Loading users...</p>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <EmptyState title="No users found" description="Try adjusting your search or filters." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-purple-200 bg-purple-50/60">
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
-                    User
-                  </th>
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
-                    Role
-                  </th>
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
-                    ID / Dept
-                  </th>
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
-                    Status
-                  </th>
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
-                    Registered
-                  </th>
-                  <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-purple-100">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-purple-50/60 transition-colors">
-                    <td className="py-3 px-4">
-                      <p className="font-bold text-purple-950 text-sm">{u.fullName}</p>
-                      <p className="text-xs text-purple-800/60 font-medium">{u.email}</p>
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-800 capitalize">
-                        {roleIcon(u.role)}
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs font-semibold text-purple-900/80 whitespace-nowrap">
-                      {memberId(u)}
-                      {u.department && (
-                        <span className="text-purple-700/50"> · {u.department}</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full border text-[11px] font-black capitalize ${statusBadgeClass[u.status] || statusBadgeClass.active}`}
-                      >
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs font-medium text-purple-800/70 whitespace-nowrap">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => setSelectedUser(u)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-purple-700 text-xs font-bold hover:bg-purple-100 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <button
+              onClick={() => fetchUsers(pagination.page)}
+              className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
+            </button>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs font-semibold text-purple-900/70">
-            Showing{' '}
-            <strong className="text-purple-950">{(pagination.page - 1) * PAGE_SIZE + 1}</strong> to{' '}
-            <strong className="text-purple-950">
-              {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
-            </strong>{' '}
-            of <strong className="text-purple-950">{pagination.totalItems}</strong> users
-          </p>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => goToPage(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
-            >
-              Previous
-            </button>
-            <span className="text-xs font-black text-purple-950">
-              {pagination.page} / {pagination.totalPages}
-            </span>
-            <button
-              onClick={() => goToPage(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* User Detail Modal */}
-      {selectedUser && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
-          onClick={() => setSelectedUser(null)}
-        >
-          <div
-            className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-purple-200 overflow-hidden text-purple-950"
-            onClick={(e) => e.stopPropagation()}
+      {/* Tabs */}
+      <div className="flex gap-2 mb-5">
+        {[
+          { key: 'staff', label: 'Staff & Approvals' },
+          { key: 'all', label: 'All Users' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+              activeTab === t.key
+                ? 'bg-purple-700 text-white shadow-md shadow-purple-600/25'
+                : 'bg-white/80 border border-purple-200 text-purple-800 hover:bg-purple-100'
+            }`}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100">
-              <h3 className="font-black text-purple-950">User Details</h3>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="p-1.5 rounded-lg text-purple-400 hover:text-purple-700 hover:bg-purple-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'staff' ? (
+        <StaffManagementPanel />
+      ) : (
+        <>
+          {/* Filters */}
+          <div className="purple-card rounded-3xl p-4 sm:p-5 mb-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name, email, ID, or department..."
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-medium text-purple-950 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none transition-all placeholder:text-purple-400"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-700"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700">
-                  {roleIcon(selectedUser.role)}
-                </div>
-                <div>
-                  <p className="font-extrabold text-purple-950">{selectedUser.fullName}</p>
-                  <p className="text-xs text-purple-800/60 font-medium">{selectedUser.email}</p>
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-950 focus:border-purple-600 outline-none"
+              >
+                {ROLE_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">Role</p>
-                  <p className="font-extrabold text-purple-950 capitalize">{selectedUser.role}</p>
-                </div>
-                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">Status</p>
-                  <p
-                    className={`font-extrabold capitalize ${
-                      selectedUser.status === 'active'
-                        ? 'text-emerald-700'
-                        : selectedUser.status === 'pending'
-                          ? 'text-amber-700'
-                          : 'text-rose-700'
-                    }`}
-                  >
-                    {selectedUser.status}
-                  </p>
-                </div>
-                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
-                    {selectedUser.role === 'student'
-                      ? 'Student ID'
-                      : selectedUser.role === 'staff'
-                        ? 'Staff ID'
-                        : 'ID'}
-                  </p>
-                  <p className="font-extrabold text-purple-950">{memberId(selectedUser)}</p>
-                </div>
-                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
-                    Department
-                  </p>
-                  <p className="font-extrabold text-purple-950">{selectedUser.department || '—'}</p>
-                </div>
-                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100 col-span-2">
-                  <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
-                    Registered
-                  </p>
-                  <p className="font-extrabold text-purple-950">
-                    {selectedUser.createdAt
-                      ? new Date(selectedUser.createdAt).toLocaleString()
-                      : '—'}
-                  </p>
-                </div>
-              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-purple-200 bg-white/90 text-xs font-bold text-purple-950 focus:border-purple-600 outline-none"
+              >
+                {STATUS_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
+
+          {/* Users Table */}
+          <div className="purple-card rounded-3xl overflow-hidden">
+            {loading ? (
+              <div className="py-20 text-center">
+                <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-purple-900/70 font-semibold">Loading users...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <EmptyState
+                title="No users found"
+                description="Try adjusting your search or filters."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-purple-200 bg-purple-50/60">
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
+                        User
+                      </th>
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
+                        Role
+                      </th>
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
+                        ID / Dept
+                      </th>
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
+                        Status
+                      </th>
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70">
+                        Registered
+                      </th>
+                      <th className="py-3.5 px-4 text-xs font-black uppercase tracking-wider text-purple-900/70 text-right">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-100">
+                    {filteredUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-purple-50/60 transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-purple-950 text-sm">{u.fullName}</p>
+                          <p className="text-xs text-purple-800/60 font-medium">{u.email}</p>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-800 capitalize">
+                            {roleIcon(u.role)}
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-xs font-semibold text-purple-900/80 whitespace-nowrap">
+                          {memberId(u)}
+                          {u.department && (
+                            <span className="text-purple-700/50"> · {u.department}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-full border text-[11px] font-black capitalize ${statusBadgeClass[u.status] || statusBadgeClass.active}`}
+                          >
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-xs font-medium text-purple-800/70 whitespace-nowrap">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => setSelectedUser(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-purple-700 text-xs font-bold hover:bg-purple-100 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-xs font-semibold text-purple-900/70">
+                Showing{' '}
+                <strong className="text-purple-950">{(pagination.page - 1) * PAGE_SIZE + 1}</strong>{' '}
+                to{' '}
+                <strong className="text-purple-950">
+                  {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
+                </strong>{' '}
+                of <strong className="text-purple-950">{pagination.totalItems}</strong> users
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-black text-purple-950">
+                  {pagination.page} / {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => goToPage(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add Admin Modal */}
+          {adminModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
+              onClick={() => setAdminModalOpen(false)}
+            >
+              <div
+                className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-purple-200 overflow-hidden text-purple-950"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100 bg-purple-50/80">
+                  <h3 className="text-base font-black text-purple-950">Add Administrator</h3>
+                  <button
+                    onClick={() => setAdminModalOpen(false)}
+                    className="p-1.5 rounded-lg text-purple-400 hover:text-purple-700 hover:bg-purple-100"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form onSubmit={handleCreateAdmin} className="p-6 space-y-4">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Full Name"
+                    value={adminForm.fullName}
+                    onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                  />
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email Address"
+                      value={adminForm.email}
+                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                    />
+                  </div>
+                  <div className="relative">
+                    <LockKeyhole className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="Password (min 6 chars)"
+                      value={adminForm.password}
+                      onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                    />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Confirm Password"
+                    value={adminForm.confirmPassword}
+                    onChange={(e) =>
+                      setAdminForm({ ...adminForm, confirmPassword: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                  />
+                  <div className="pt-3 border-t border-purple-100 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAdminModalOpen(false)}
+                      className="px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={adminSubmitting}
+                      className="px-5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 text-white font-extrabold text-xs rounded-xl disabled:opacity-50"
+                    >
+                      {adminSubmitting ? 'Creating...' : 'Create Admin'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* User Detail Modal */}
+          {selectedUser && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
+              onClick={() => setSelectedUser(null)}
+            >
+              <div
+                className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-purple-200 overflow-hidden text-purple-950"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100">
+                  <h3 className="font-black text-purple-950">User Details</h3>
+                  <button
+                    onClick={() => setSelectedUser(null)}
+                    className="p-1.5 rounded-lg text-purple-400 hover:text-purple-700 hover:bg-purple-100"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700">
+                      {roleIcon(selectedUser.role)}
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-purple-950">{selectedUser.fullName}</p>
+                      <p className="text-xs text-purple-800/60 font-medium">{selectedUser.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
+                      <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
+                        Role
+                      </p>
+                      <p className="font-extrabold text-purple-950 capitalize">
+                        {selectedUser.role}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
+                      <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
+                        Status
+                      </p>
+                      <p
+                        className={`font-extrabold capitalize ${
+                          selectedUser.status === 'active'
+                            ? 'text-emerald-700'
+                            : selectedUser.status === 'pending'
+                              ? 'text-amber-700'
+                              : 'text-rose-700'
+                        }`}
+                      >
+                        {selectedUser.status}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
+                      <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
+                        {selectedUser.role === 'student'
+                          ? 'Student ID'
+                          : selectedUser.role === 'staff'
+                            ? 'Staff ID'
+                            : 'ID'}
+                      </p>
+                      <p className="font-extrabold text-purple-950">{memberId(selectedUser)}</p>
+                    </div>
+                    <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100">
+                      <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
+                        Department
+                      </p>
+                      <p className="font-extrabold text-purple-950">
+                        {selectedUser.department || '—'}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-100 col-span-2">
+                      <p className="text-purple-700/60 font-bold uppercase text-[10px] mb-1">
+                        Registered
+                      </p>
+                      <p className="font-extrabold text-purple-950">
+                        {selectedUser.createdAt
+                          ? new Date(selectedUser.createdAt).toLocaleString()
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </AppLayout>
   );
