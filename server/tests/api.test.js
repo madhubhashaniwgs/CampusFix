@@ -2205,3 +2205,27 @@ describe('Staff workload ordering', () => {
     assert.ok(w.every((r) => typeof r.status === 'string'));
   });
 });
+
+describe('Bearer token authentication fallback', () => {
+  test('Authorization Bearer header authenticates without cookie', async () => {
+    await createUserDirect({ email: 'bearer@test.com' });
+    const login = await loginViaApi('bearer@test.com');
+    assert.equal(login.status, 200);
+
+    const authCookie = login.setCookie.find((c) => c.startsWith('campusfix_token='));
+    assert.ok(authCookie, 'auth cookie present in login response');
+    const jwt = authCookie.split(';')[0].split('=')[1];
+
+    const res = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.data.email, 'bearer@test.com');
+
+    const bad = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: 'Bearer invalid.token.here' },
+    });
+    assert.equal(bad.status, 401);
+  });
+});
