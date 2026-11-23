@@ -13,9 +13,9 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
-import AdminStaffPage from './pages/admin/AdminStaffPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffIssuesPage from './pages/staff/StaffIssuesPage';
 import StaffIssueDetailsPage from './pages/staff/StaffIssueDetailsPage';
@@ -108,9 +108,10 @@ function App() {
 
         <Route path="/admin/issues/:id" element={<AdminIssueDetailsPage />} />
 
-        <Route path="/admin/staff" element={<AdminStaffPage />} />
+        <Route path="/admin/staff" element={<Navigate to="/admin/users" replace />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
