@@ -1,0 +1,49 @@
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.analytics-card {
+  background: #fff;
+  border: 1px solid #ede9fe;
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+.analytics-card-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #4c1d95;
+  margin: 0 0 0.75rem;
+}
+.analytics-state {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+.analytics-error {
+  color: #dc2626;
+}
+@media (max-width: 640px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.analytics-page {
+  max-width: 1400px;
+}
+.analytics-page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #201638;
+  margin: 0 0 0.25rem;
+}
+.analytics-page-header p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}

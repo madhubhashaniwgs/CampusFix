@@ -27,3 +27,9 @@ export const rejectStaff = async (userId) => {
   const response = await apiClient.patch(`/admin/staff/${userId}/reject`);
   return response.data;
 };
+
+// Create an admin account (Admin only)
+export const createAdminMember = async (adminData) => {
+  const response = await apiClient.post('/users/admin', adminData);
+  return response.data;
+};

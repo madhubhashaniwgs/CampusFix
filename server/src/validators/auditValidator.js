@@ -8,6 +8,7 @@ const VALID_ACTIONS = new Set([
   'user.logout',
   'user.password_changed',
   'staff.created',
+  'admin.created',
   'staff.approved',
   'staff.rejected',
   'issue.created',

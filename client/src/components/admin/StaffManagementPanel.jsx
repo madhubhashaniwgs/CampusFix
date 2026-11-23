@@ -14,7 +14,6 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
 import { getStaffMembers } from '../../services/issueService';
 import { createStaffMember, getUsers, approveStaff, rejectStaff } from '../../services/userService';
@@ -29,7 +28,7 @@ const emptyForm = {
   confirmPassword: '',
 };
 
-export default function AdminStaffPage() {
+export default function StaffManagementPanel() {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
 
@@ -153,7 +152,7 @@ export default function AdminStaffPage() {
   );
 
   return (
-    <AppLayout activeNav="staff">
+    <>
       {/* Modal: Create Staff Account */}
       {modalOpen && (
         <div
@@ -505,6 +504,6 @@ export default function AdminStaffPage() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </>
   );
 }

@@ -14,6 +14,7 @@ import {
   X,
   ChevronDown,
   ScrollText,
+  BarChart3,
 } from 'lucide-react';
 
 export default function AppLayout({ children, activeNav }) {
@@ -63,9 +64,9 @@ export default function AppLayout({ children, activeNav }) {
     admin: [
       { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/admin/issues', label: 'All Issues', icon: ClipboardList },
-      { to: '/admin/staff', label: 'Staff Team', icon: Users },
       { to: '/admin/users', label: 'User Management', icon: UserRound },
       { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
+      { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     ],
   };
 
