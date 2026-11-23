@@ -5,7 +5,10 @@ import issueRepository from '../repositories/issueRepository.js';
 import userRepository from '../repositories/userRepository.js';
 import cloudinaryService from './cloudinaryService.js';
 import auditService from './auditService.js';
+import emailService from './emailService.js';
 import ApiError from '../utils/ApiError.js';
+
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 const isCloudinaryUrl = (photo) => {
   if (typeof photo !== 'string' || !photo.startsWith('https://')) {
@@ -88,6 +91,20 @@ class IssueService {
             target: { type: 'issue', id: created._id },
             metadata: { publicId: photoPublicId },
           });
+        }
+
+        // Notify the reporting student. Email failure must never
+        // break issue creation.
+        const reporterEmail = created.reportedBy?.email;
+        if (reporterEmail) {
+          const tpl = emailService.issueReported({
+            ticketId: created.ticketId,
+            title: created.title,
+            category: created.category,
+            priority: created.priority,
+            issueUrl: `${CLIENT_URL}/student/my-issues`,
+          });
+          await emailService.send({ to: reporterEmail, ...tpl });
         }
 
         return created;
@@ -248,6 +265,20 @@ class IssueService {
       metadata: { from: issue.status, to: status },
     });
 
+    // Notify the reporter on meaningful transitions only.
+    if (['in_progress', 'resolved'].includes(status)) {
+      const reporterEmail = issue.reportedBy?.email;
+      if (reporterEmail) {
+        const tpl = emailService.issueStatusChanged({
+          ticketId: issue.ticketId,
+          title: issue.title,
+          status,
+          issueUrl: `${CLIENT_URL}/student/my-issues`,
+        });
+        await emailService.send({ to: reporterEmail, ...tpl });
+      }
+    }
+
     return updated;
   }
 
@@ -319,6 +350,31 @@ class IssueService {
       target: { type: 'issue', id: issueId },
       metadata: { fromStaffId: previousAssignee, toStaffId: staffId },
     });
+
+    // Notify the reporter and the newly assigned staff member.
+    const updatedIssue = await issueRepository.findById(issueId);
+    const issueUrl = `${CLIENT_URL}/staff/issues`;
+
+    const reporterEmail = updatedIssue?.reportedBy?.email;
+    if (reporterEmail) {
+      const tpl = emailService.issueStatusChanged({
+        ticketId: updatedIssue.ticketId,
+        title: updatedIssue.title,
+        status: 'assigned',
+        issueUrl: `${CLIENT_URL}/student/my-issues`,
+      });
+      await emailService.send({ to: reporterEmail, ...tpl });
+    }
+
+    if (staff.email) {
+      const tpl = emailService.issueAssigned({
+        ticketId: updatedIssue.ticketId,
+        title: updatedIssue.title,
+        assigneeName: staff.fullName,
+        issueUrl,
+      });
+      await emailService.send({ to: staff.email, ...tpl });
+    }
 
     return assigned;
   }

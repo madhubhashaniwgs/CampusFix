@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 
 import userRepository from '../repositories/userRepository.js';
 import auditService from './auditService.js';
+import emailService from './emailService.js';
 import ApiError from '../utils/ApiError.js';
 
 class UserService {
@@ -128,6 +129,14 @@ class UserService {
       metadata: { status: 'active' },
     });
 
+    if (updated.email) {
+      const tpl = emailService.staffApproved({
+        name: updated.fullName,
+        loginUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`,
+      });
+      await emailService.send({ to: updated.email, ...tpl });
+    }
+
     return {
       id: updated._id,
       fullName: updated.fullName,
@@ -174,6 +183,11 @@ class UserService {
       target: { type: 'user', id: userId },
       metadata: { status: 'rejected' },
     });
+
+    if (updated.email) {
+      const tpl = emailService.staffRejected({ name: updated.fullName });
+      await emailService.send({ to: updated.email, ...tpl });
+    }
 
     return {
       id: updated._id,

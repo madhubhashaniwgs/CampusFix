@@ -1861,3 +1861,170 @@ describe('Admin audit log API', () => {
     assert.equal(first.csrf, undefined);
   });
 });
+
+describe('Email notifications', () => {
+  let emailService;
+  let sent;
+  let originalSend;
+
+  before(async () => {
+    emailService = (await import('../src/services/emailService.js')).default;
+    originalSend = emailService.send;
+    sent = [];
+    emailService.send = async (msg) => {
+      sent.push(msg);
+      return true;
+    };
+  });
+
+  afterEach(() => {
+    sent = [];
+  });
+
+  after(() => {
+    emailService.send = originalSend;
+  });
+
+  test('templates contain expected details and no secrets', () => {
+    const tpl = emailService.issueReported({
+      ticketId: 'CF-TEST1234',
+      title: 'Broken light',
+      category: 'electrical',
+      priority: 'high',
+      issueUrl: 'http://localhost:5173/student/my-issues',
+    });
+    assert.match(tpl.subject, /CF-TEST1234/);
+    assert.match(tpl.html, /Broken light/);
+    assert.match(tpl.html, /CampusFix/);
+    assert.match(tpl.text, /CF-TEST1234/);
+    assert.equal(tpl.html.includes('password'), false);
+    assert.equal(tpl.html.includes('token'), false);
+
+    const staff = emailService.staffApproved({
+      name: 'Jane',
+      loginUrl: 'http://localhost:5173/login',
+    });
+    assert.match(staff.subject, /approved/i);
+    assert.match(staff.html, /Jane/);
+  });
+
+  test('issue creation notifies the reporter', async () => {
+    await createUserDirect({ email: 'email_student@test.com', role: 'student' });
+    await loginAs('email_student@test.com');
+
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Email test issue',
+        description: 'Should trigger notification',
+        category: 'plumbing',
+        location: 'Block A',
+      },
+    });
+    assert.equal(res.status, 201);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].to, 'email_student@test.com');
+    assert.match(sent[0].subject, /reported/i);
+  });
+
+  test('failed operations send no email', async () => {
+    await loginAs('email_student@test.com');
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: '',
+        description: '',
+        category: 'other',
+        location: '',
+      },
+    });
+    assert.equal(res.status, 400);
+    assert.equal(sent.length, 0);
+  });
+
+  test('assignment notifies reporter and staff; same-staff re-assign sends none', async () => {
+    await createUserDirect({
+      email: 'email_staff@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    await createUserDirect({ email: 'email_admin@test.com', role: 'admin' });
+    const staff = await User.findOne({ email: 'email_staff@test.com' });
+
+    await loginAs('email_student@test.com');
+    const issue = await api('POST', '/api/issues', {
+      body: {
+        title: 'Assign email test',
+        description: 'Notify on assign',
+        category: 'it',
+        location: 'Lab',
+      },
+    });
+    const issueId = issue.body.data._id;
+    sent = [];
+
+    await loginAs('email_admin@test.com');
+    const assign = await api('PATCH', `/api/issues/${issueId}/assign`, {
+      body: { staffId: staff._id.toString() },
+    });
+    assert.equal(assign.status, 200);
+    // Reporter status-changed + staff assignment emails.
+    assert.ok(sent.length >= 2);
+    const recipients = sent.map((m) => m.to).sort();
+    assert.ok(recipients.includes('email_student@test.com'));
+    assert.ok(recipients.includes('email_staff@test.com'));
+
+    // No-op re-assignment: no additional emails.
+    sent = [];
+    await api('PATCH', `/api/issues/${issueId}/assign`, {
+      body: { staffId: staff._id.toString() },
+    });
+    assert.equal(sent.length, 0);
+  });
+
+  test('staff approval and rejection notify the staff member', async () => {
+    await loginAs('email_admin@test.com');
+    await api('POST', '/api/auth/register', {
+      body: {
+        role: 'staff',
+        fullName: 'Notify Staff',
+        email: 'email_pending@test.com',
+        staffId: 'NP01',
+        department: 'Ops',
+        password: 'TestPass123',
+      },
+    });
+    const pending = await User.findOne({ email: 'email_pending@test.com' });
+
+    sent = [];
+    await api('PATCH', `/api/admin/staff/${pending._id}/approve`);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].to, 'email_pending@test.com');
+    assert.match(sent[0].subject, /approved/i);
+
+    sent = [];
+    await api('PATCH', `/api/admin/staff/${pending._id}/reject`);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].to, 'email_pending@test.com');
+    assert.match(sent[0].subject, /update/i);
+  });
+
+  test('email provider failure does not break business operations', async () => {
+    // send() contract: never throws, returns false on provider failure.
+    emailService.send = async () => false;
+    await createUserDirect({ email: 'email_resilient@test.com', role: 'student' });
+    await loginAs('email_resilient@test.com');
+    const res = await api('POST', '/api/issues', {
+      body: {
+        title: 'Resilience check',
+        description: 'Email failure must not break this',
+        category: 'other',
+        location: 'Lobby',
+      },
+    });
+    emailService.send = async (msg) => {
+      sent.push(msg);
+      return true;
+    };
+    // Provider returned false; business op must still succeed.
+    assert.equal(res.status, 201);
+  });
+});
