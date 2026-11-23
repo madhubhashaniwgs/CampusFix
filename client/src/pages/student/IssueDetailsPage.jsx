@@ -21,6 +21,7 @@ import ImageModal from '../../components/common/ImageModal';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssueById } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported', desc: 'Ticket submitted' },
@@ -56,6 +57,11 @@ export default function IssueDetailsPage() {
   useEffect(() => {
     fetchIssue();
   }, [id]);
+
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssue
+  );
 
   const handleCopyTicket = async () => {
     if (!issue?.ticketId) return;

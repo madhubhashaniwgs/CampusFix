@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 
 import userRepository from '../repositories/userRepository.js';
+import { disconnectUserSockets } from '../socket/socketServer.js';
 import auditService from './auditService.js';
 import ApiError from '../utils/ApiError.js';
 import generateToken from '../utils/generateToken.js';
@@ -124,6 +125,7 @@ class AuthService {
   // JWT issued before this point (i.e. all sessions for the user).
   async logout(userId) {
     await userRepository.incrementTokenVersion(userId);
+    disconnectUserSockets(userId);
 
     const user = await userRepository.findById(userId);
     await auditService.record({
@@ -152,6 +154,7 @@ class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     const updated = await userRepository.updatePasswordAndBumpVersion(userId, hashedPassword);
+    disconnectUserSockets(userId);
 
     await auditService.record({
       action: 'user.password_changed',

@@ -33,6 +33,7 @@ import {
   assignIssue,
 } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -97,6 +98,19 @@ export default function AdminDashboardPage() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+      'staff:approved',
+      'staff:rejected',
+    ],
+    fetchDashboard
+  );
 
   const handleQuickAssign = async (issueId, staffId) => {
     if (!staffId) return;

@@ -17,6 +17,7 @@ import {
   assignIssue,
 } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const PAGE_SIZE = 10;
 
@@ -134,6 +135,21 @@ export default function AdminIssuesPage() {
   useEffect(() => {
     fetchIssues(page);
   }, [fetchIssues, page]);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    () => {
+      fetchIssues(page);
+      fetchCounts();
+    },
+    [fetchIssues]
+  );
 
   const handleQuickAssign = async (issueId, staffId) => {
     if (!staffId) return;

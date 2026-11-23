@@ -26,6 +26,7 @@ import ImageModal from '../components/common/ImageModal';
 import EmptyState from '../components/common/EmptyState';
 import IssueCard from '../components/issues/IssueCard';
 import IssuePhoto from '../components/common/IssuePhoto';
+import { useRealtimeRefresh } from '../hooks/useRealtime';
 import { getIssues, getIssueCount } from '../services/issueService';
 
 export default function DashboardPage() {
@@ -43,38 +44,50 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [activePhoto, setActivePhoto] = useState({ isOpen: false, src: '', title: '' });
 
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      const [issuesRes, total, reported, inProgress, resolved] = await Promise.all([
+        getIssues({ limit: 6 }),
+        getIssueCount({}),
+        getIssueCount({ status: 'reported' }),
+        getIssueCount({ status: 'in_progress' }),
+        getIssueCount({ status: 'resolved' }),
+      ]);
+
+      setRecentIssues(issuesRes.data || []);
+      setStats({
+        total,
+        reported,
+        in_progress: inProgress,
+        resolved,
+      });
+    } catch {
+      // Fallback gracefully
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        const [issuesRes, total, reported, inProgress, resolved] = await Promise.all([
-          getIssues({ limit: 6 }),
-          getIssueCount({}),
-          getIssueCount({ status: 'reported' }),
-          getIssueCount({ status: 'in_progress' }),
-          getIssueCount({ status: 'resolved' }),
-        ]);
-
-        setRecentIssues(issuesRes.data || []);
-        setStats({
-          total,
-          reported,
-          in_progress: inProgress,
-          resolved,
-        });
-      } catch {
-        // Fallback gracefully
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboard();
 
     // Auto-refresh dashboard data every 30 seconds.
     const interval = setInterval(fetchDashboard, 30000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    fetchDashboard
+  );
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();

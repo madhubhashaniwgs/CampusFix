@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import userRepository from '../repositories/userRepository.js';
 import auditService from './auditService.js';
 import emailService from './emailService.js';
+import notificationService from './notificationService.js';
+import { emitToRole, emitToUser } from '../socket/socketServer.js';
 import ApiError from '../utils/ApiError.js';
 
 class UserService {
@@ -46,6 +48,9 @@ class UserService {
       target: { type: 'user', id: user._id },
       metadata: { role: 'staff' },
     });
+
+    emitToRole('admin', 'staff:created', { userId: user._id.toString() });
+    emitToRole('staff', 'dashboard:stats_updated', { reason: 'staff_created' });
 
     return {
       id: user._id,
@@ -129,6 +134,15 @@ class UserService {
       metadata: { status: 'active' },
     });
 
+    emitToRole('admin', 'staff:approved', { userId: updated._id.toString() });
+    emitToRole('staff', 'dashboard:stats_updated', { reason: 'staff_approved' });
+    await notificationService.create({
+      userId: updated._id,
+      type: 'staff_approved',
+      title: 'Staff account approved',
+      message: 'Your staff account has been approved. You can now log in.',
+    });
+
     if (updated.email) {
       const tpl = emailService.staffApproved({
         name: updated.fullName,
@@ -182,6 +196,14 @@ class UserService {
         : { userId: null, role: 'anonymous' },
       target: { type: 'user', id: userId },
       metadata: { status: 'rejected' },
+    });
+
+    emitToRole('admin', 'staff:rejected', { userId: updated._id.toString() });
+    await notificationService.create({
+      userId: updated._id,
+      type: 'staff_rejected',
+      title: 'Staff registration update',
+      message: 'Your staff registration was not approved.',
     });
 
     if (updated.email) {

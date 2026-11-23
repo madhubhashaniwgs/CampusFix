@@ -6,6 +6,7 @@ import './AdminAuditLogsPage.css';
 import EmptyState from '../../components/common/EmptyState';
 import { getAuditLogs } from '../../services/auditService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const ACTION_OPTIONS = [
   { value: '', label: 'All Actions' },
@@ -114,6 +115,14 @@ export default function AdminAuditLogsPage() {
     const timer = setTimeout(fetchLogs, 0);
     return () => clearTimeout(timer);
   }, [fetchLogs]);
+
+  useRealtimeRefresh(
+    ['audit:new'],
+    () => {
+      fetchLogs();
+    },
+    [fetchLogs]
+  );
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

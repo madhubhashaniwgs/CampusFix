@@ -27,6 +27,7 @@ import QuickStatusModal from '../../components/issues/QuickStatusModal';
 import EmptyState from '../../components/common/EmptyState';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssues, getIssueCount } from '../../services/issueService';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
@@ -77,6 +78,17 @@ export default function StaffDashboardPage() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    fetchDashboard
+  );
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();

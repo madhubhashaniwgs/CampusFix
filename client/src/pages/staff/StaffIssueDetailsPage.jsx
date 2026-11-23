@@ -23,6 +23,7 @@ import ImageModal from '../../components/common/ImageModal';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssueById, updateIssueStatus } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported' },
@@ -69,6 +70,11 @@ export default function StaffIssueDetailsPage() {
   useEffect(() => {
     fetchIssue();
   }, [id]);
+
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssue
+  );
 
   const handleStatusUpdate = async (statusToSet = selectedStatus) => {
     try {

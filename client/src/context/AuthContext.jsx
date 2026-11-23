@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 import { registerUser, loginUser, getCurrentUser, logoutUser } from '../services/authService';
+import { connectSocket, disconnectSocket } from '../services/socketService';
 
 const AuthContext = createContext(null);
 
@@ -48,6 +49,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const response = await loginUser(credentials);
+    connectSocket();
 
     sessionStorage.setItem(SESSION_HINT_KEY, '1');
     setUser(response.data.user);
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await logoutUser();
+      disconnectSocket();
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {

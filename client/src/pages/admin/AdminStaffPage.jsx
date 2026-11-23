@@ -20,6 +20,7 @@ import { getStaffMembers } from '../../services/issueService';
 import { createStaffMember, getUsers, approveStaff, rejectStaff } from '../../services/userService';
 import { useToast } from '../../context/ToastContext';
 import { Check, X as XIcon, Clock } from 'lucide-react';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const emptyForm = {
   fullName: '',
@@ -80,6 +81,11 @@ export default function AdminStaffPage() {
   useEffect(() => {
     fetchStaff(1);
   }, []);
+
+  useRealtimeRefresh(
+    ['staff:created', 'staff:approved', 'staff:rejected', 'dashboard:stats_updated'],
+    () => fetchStaff(pagination.page)
+  );
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));

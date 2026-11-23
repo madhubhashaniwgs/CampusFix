@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../notifications/NotificationBell';
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -150,6 +151,9 @@ export default function AppLayout({ children, activeNav }) {
                   Report Issue
                 </button>
               )}
+
+              {/* Notifications */}
+              <NotificationBell />
 
               {/* Role Badge */}
               <span

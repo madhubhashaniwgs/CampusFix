@@ -28,6 +28,7 @@ import {
   assignIssue,
 } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported' },
@@ -77,6 +78,11 @@ export default function AdminIssueDetailsPage() {
   useEffect(() => {
     fetchIssueAndStaff();
   }, [id]);
+
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssueAndStaff
+  );
 
   const handleAssignStaff = async () => {
     if (!selectedStaffId) return;

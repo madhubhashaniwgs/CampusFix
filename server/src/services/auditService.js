@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 import auditLogRepository from '../repositories/auditLogRepository.js';
+import { emitToRole } from '../socket/socketServer.js';
 
 // Explicit allowlist of supported audit actions. Anything else is
 // rejected so callers cannot invent arbitrary event names.
@@ -58,6 +59,12 @@ class AuditService {
       if (!validated) return null;
 
       await auditLogRepository.create(validated);
+      emitToRole('admin', 'audit:new', {
+        action: validated.action,
+        targetType: validated.target?.type,
+        targetId: validated.target?.id?.toString(),
+        createdAt: new Date().toISOString(),
+      });
       return true;
     } catch (error) {
       // Never expose internals; audit failure must not surface to

@@ -6,6 +6,8 @@ import userRepository from '../repositories/userRepository.js';
 import cloudinaryService from './cloudinaryService.js';
 import auditService from './auditService.js';
 import emailService from './emailService.js';
+import notificationService from './notificationService.js';
+import { emitTo, emitToRole } from '../socket/socketServer.js';
 import ApiError from '../utils/ApiError.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -19,6 +21,14 @@ const isCloudinaryUrl = (photo) => {
   } catch {
     return false;
   }
+};
+
+const updatedIssueRooms = (issue, staffId) => {
+  const rooms = [];
+  if (issue.reportedBy?._id) rooms.push(`user:${issue.reportedBy._id}`);
+  if (issue.assignedTo?._id) rooms.push(`user:${issue.assignedTo._id}`);
+  rooms.push(`user:${staffId}`);
+  return rooms;
 };
 
 class IssueService {
@@ -92,6 +102,21 @@ class IssueService {
             metadata: { publicId: photoPublicId },
           });
         }
+
+        emitToRole('admin', 'issue:created', {
+          issueId: created._id.toString(),
+          ticketId: created.ticketId,
+          status: created.status,
+        });
+        emitToRole('admin', 'dashboard:stats_updated', { reason: 'issue_created' });
+        emitToRole('student', 'dashboard:stats_updated', { reason: 'issue_created' });
+        await notificationService.create({
+          userId: created.reportedBy?._id || userId,
+          type: 'issue_created',
+          title: 'Issue reported',
+          message: `Your issue ${created.ticketId} was submitted successfully.`,
+          issueId: created._id,
+        });
 
         // Notify the reporting student. Email failure must never
         // break issue creation.
@@ -265,6 +290,26 @@ class IssueService {
       metadata: { from: issue.status, to: status },
     });
 
+    const statusRooms = [
+      `user:${issue.reportedBy?._id}`,
+      ...(issue.assignedTo?._id ? [`user:${issue.assignedTo._id}`] : []),
+      'role:admin',
+    ].filter(Boolean);
+    emitToRole('admin', 'dashboard:stats_updated', { reason: 'status_changed' });
+    emitToRole('staff', 'dashboard:stats_updated', { reason: 'status_changed' });
+    emitTo(statusRooms.length ? statusRooms : 'role:admin', 'issue:status_changed', {
+      issueId: issueId.toString(),
+      status,
+      from: issue.status,
+    });
+    await notificationService.create({
+      userId: issue.reportedBy?._id,
+      type: 'issue_status_changed',
+      title: `Issue ${status === 'resolved' ? 'resolved' : 'updated'}`,
+      message: `Issue ${issue.ticketId} is now ${status.replace('_', ' ')}.`,
+      issueId,
+    });
+
     // Notify the reporter on meaningful transitions only.
     if (['in_progress', 'resolved'].includes(status)) {
       const reporterEmail = issue.reportedBy?.email;
@@ -349,6 +394,31 @@ class IssueService {
       actor: { userId: adminId, role: admin.role },
       target: { type: 'issue', id: issueId },
       metadata: { fromStaffId: previousAssignee, toStaffId: staffId },
+    });
+
+    const assignRooms = [...updatedIssueRooms(issue, staffId), 'role:admin'];
+    emitTo(assignRooms, 'issue:assigned', {
+      issueId: issueId.toString(),
+      staffId: staffId.toString(),
+      status: 'assigned',
+    });
+    emitTo('role:staff', 'dashboard:stats_updated', { reason: 'issue_assigned' });
+
+    // Notify reporter + new assignee (previous assignee sees update
+    // via the staff room refresh, no notification needed).
+    await notificationService.create({
+      userId: issue.reportedBy?._id,
+      type: 'issue_assigned',
+      title: 'Issue assigned',
+      message: `Issue ${issue.ticketId} was assigned to a staff member.`,
+      issueId,
+    });
+    await notificationService.create({
+      userId: staffId,
+      type: 'issue_assigned',
+      title: 'New issue assigned to you',
+      message: `Issue ${issue.ticketId} — ${issue.title}`,
+      issueId,
     });
 
     // Notify the reporter and the newly assigned staff member.
