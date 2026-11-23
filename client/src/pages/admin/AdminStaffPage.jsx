@@ -157,7 +157,7 @@ export default function AdminStaffPage() {
       {/* Modal: Create Staff Account */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-md animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in"
           onClick={() => setModalOpen(false)}
         >
           <div

@@ -293,7 +293,7 @@ export default function AdminUsersPage() {
       {/* User Detail Modal */}
       {selectedUser && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
           onClick={() => setSelectedUser(null)}
         >
           <div

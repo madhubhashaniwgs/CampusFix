@@ -67,7 +67,7 @@ export default function QuickStatusModal({ isOpen, issue, onClose, onUpdated }) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-md animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in"
       onClick={onClose}
     >
       <div
