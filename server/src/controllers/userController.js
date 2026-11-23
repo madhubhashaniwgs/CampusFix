@@ -12,6 +12,22 @@ class UserController {
     }
   };
 
+  createAdmin = async (req, res, next) => {
+    try {
+      const user = await userService.createStaff(req.body, req.user, 'admin');
+      res.status(201).json(
+        new ApiResponse(201, 'Admin account created successfully', {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
   listUsers = async (req, res, next) => {
     try {
       const { role, status, page, limit } = req.query;

@@ -9,7 +9,7 @@ import { emitToRole, emitToUser } from '../socket/socketServer.js';
 import ApiError from '../utils/ApiError.js';
 
 class UserService {
-  async createStaff(userData, actor = null) {
+  async createStaff(userData, actor = null, role = 'staff') {
     const fullName = userData.fullName.trim();
     const email = userData.email.trim().toLowerCase();
 
@@ -21,14 +21,15 @@ class UserService {
 
     const hashedPassword = await bcrypt.hash(userData.password, 12);
 
-    // Role is always forced to 'staff'; any role sent in the
-    // request body is ignored. Admin-created accounts are active
-    // immediately (no approval needed).
+    // Role is server-controlled ('staff' or 'admin'); any role sent
+    // in the request body is ignored. Admin-created accounts are
+    // active immediately (no approval needed).
+    const safeRole = role === 'admin' ? 'admin' : 'staff';
     const user = await userRepository.create({
       fullName,
       email,
       password: hashedPassword,
-      role: 'staff',
+      role: safeRole,
       status: 'active',
       staffId:
         userData.staffId && String(userData.staffId).trim()
@@ -41,15 +42,16 @@ class UserService {
     });
 
     await auditService.record({
-      action: 'staff.created',
+      action: safeRole === 'admin' ? 'admin.created' : 'staff.created',
       actor: actor
         ? { userId: actor.id ?? actor._id, role: actor.role }
         : { userId: null, role: 'anonymous' },
       target: { type: 'user', id: user._id },
-      metadata: { role: 'staff' },
+      metadata: { role: safeRole },
     });
 
     emitToRole('admin', 'staff:created', { userId: user._id.toString() });
+    emitToRole('admin', 'dashboard:stats_updated', { reason: 'user_created' });
     emitToRole('staff', 'dashboard:stats_updated', { reason: 'staff_created' });
 
     return {

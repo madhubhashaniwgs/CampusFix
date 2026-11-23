@@ -7,11 +7,14 @@ import {
   GraduationCap,
   Briefcase,
   ShieldCheck,
+  UserPlus,
+  Mail,
+  LockKeyhole,
 } from 'lucide-react';
 
 import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
-import { getUsers } from '../../services/userService';
+import { getUsers, createAdminMember } from '../../services/userService';
 import StaffManagementPanel from '../../components/admin/StaffManagementPanel';
 import { useToast } from '../../context/ToastContext';
 
@@ -37,7 +40,7 @@ const statusBadgeClass = {
 
 export default function AdminUsersPage() {
   const [activeTab, setActiveTab] = useState('staff');
-  const { error: toastError } = useToast();
+  const { error: toastError, success: toastSuccess } = useToast();
 
   const PAGE_SIZE = 10;
 
@@ -53,6 +56,14 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminForm, setAdminForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const fetchUsers = async (targetPage = 1) => {
     try {
@@ -83,6 +94,34 @@ export default function AdminUsersPage() {
     fetchUsers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter, statusFilter]);
+
+  const handleCreateAdmin = async (e) => {
+    e.preventDefault();
+    if (adminForm.password !== adminForm.confirmPassword) {
+      toastError('Passwords do not match.');
+      return;
+    }
+    if (adminForm.password.length < 6) {
+      toastError('Password must be at least 6 characters.');
+      return;
+    }
+    try {
+      setAdminSubmitting(true);
+      await createAdminMember({
+        fullName: adminForm.fullName.trim(),
+        email: adminForm.email.trim().toLowerCase(),
+        password: adminForm.password,
+      });
+      toastSuccess(`Admin account for ${adminForm.fullName} created successfully!`);
+      setAdminForm({ fullName: '', email: '', password: '', confirmPassword: '' });
+      setAdminModalOpen(false);
+      fetchUsers(pagination.page);
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to create admin account.');
+    } finally {
+      setAdminSubmitting(false);
+    }
+  };
 
   const goToPage = (p) => {
     if (p >= 1 && p <= pagination.totalPages) fetchUsers(p);
@@ -120,13 +159,24 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => fetchUsers(pagination.page)}
-          className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
-          title="Refresh"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
-        </button>
+        {activeTab === 'all' && (
+          <div className="flex items-center gap-3 self-start">
+            <button
+              onClick={() => setAdminModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/25 transition-all"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Admin
+            </button>
+            <button
+              onClick={() => fetchUsers(pagination.page)}
+              className="p-2.5 rounded-xl border border-purple-200 bg-white/80 hover:bg-purple-100 text-purple-900 transition-colors self-start"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-700' : ''}`} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -315,6 +365,88 @@ export default function AdminUsersPage() {
                 >
                   Next
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add Admin Modal */}
+          {adminModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
+              onClick={() => setAdminModalOpen(false)}
+            >
+              <div
+                className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-purple-200 overflow-hidden text-purple-950"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100 bg-purple-50/80">
+                  <h3 className="text-base font-black text-purple-950">Add Administrator</h3>
+                  <button
+                    onClick={() => setAdminModalOpen(false)}
+                    className="p-1.5 rounded-lg text-purple-400 hover:text-purple-700 hover:bg-purple-100"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form onSubmit={handleCreateAdmin} className="p-6 space-y-4">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Full Name"
+                    value={adminForm.fullName}
+                    onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                  />
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email Address"
+                      value={adminForm.email}
+                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                    />
+                  </div>
+                  <div className="relative">
+                    <LockKeyhole className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="Password (min 6 chars)"
+                      value={adminForm.password}
+                      onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                    />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Confirm Password"
+                    value={adminForm.confirmPassword}
+                    onChange={(e) =>
+                      setAdminForm({ ...adminForm, confirmPassword: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50/30 text-xs font-medium focus:border-purple-600 outline-none"
+                  />
+                  <div className="pt-3 border-t border-purple-100 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAdminModalOpen(false)}
+                      className="px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={adminSubmitting}
+                      className="px-5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 text-white font-extrabold text-xs rounded-xl disabled:opacity-50"
+                    >
+                      {adminSubmitting ? 'Creating...' : 'Create Admin'}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
