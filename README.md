@@ -243,39 +243,41 @@ Details: [docs/features/realtime-system.md](docs/features/realtime-system.md)
 
 ## Screenshots
 
-Screenshots are stored in `docs/screenshots/` and displayed at a compact width
-(~320px) so they remain readable on GitHub. Capture the real screens and save
-them using the filenames below, then uncomment the corresponding `<img>` tags.
+Actual captures stored in `docs/screenshots/`, displayed two per row.
 
-<!--
 <div align="center">
 
-<img src="docs/screenshots/login.png" width="320" alt="Login page" />
-<img src="docs/screenshots/student-dashboard.png" width="320" alt="Student dashboard" />
-<img src="docs/screenshots/report-issue.png" width="320" alt="Report issue form" />
+**Landing Page** · **Login**
 
-<img src="docs/screenshots/issue-details.png" width="320" alt="Issue details" />
-<img src="docs/screenshots/admin-analytics.png" width="320" alt="Admin analytics" />
-<img src="docs/screenshots/admin-issues.png" width="320" alt="Admin issues" />
+<img src="docs/screenshots/landing-page.png" width="340" alt="Landing page" />
+<img src="docs/screenshots/login-page.png" width="340" alt="Login page" />
 
-<img src="docs/screenshots/staff-dashboard.png" width="320" alt="Staff dashboard" />
-<img src="docs/screenshots/notifications.png" width="320" alt="Notifications" />
-<img src="docs/screenshots/audit-logs.png" width="320" alt="Audit logs" />
+**Student Dashboard** · **Report Issue**
+
+<img src="docs/screenshots/student-dashboard.png" width="340" alt="Student dashboard" />
+<img src="docs/screenshots/issue-report-page.png" width="340" alt="Report issue" />
+
+**My Issues** · **Issue Details**
+
+<img src="docs/screenshots/student-issues-page.png" width="340" alt="My issues" />
+<img src="docs/screenshots/student-issue-details.png" width="340" alt="Issue details" />
+
+**Admin Dashboard** · **All Issues**
+
+<img src="docs/screenshots/admin-dashboard.png" width="340" alt="Admin dashboard" />
+<img src="docs/screenshots/admin-all-issues.png" width="340" alt="Admin issues" />
+
+**Analytics** · **User Management**
+
+<img src="docs/screenshots/analytics.png" width="340" alt="Analytics" />
+<img src="docs/screenshots/user-management.png" width="340" alt="User management" />
+
+**Audit Logs** · **Staff Issue Details**
+
+<img src="docs/screenshots/audit-logs.png" width="340" alt="Audit logs" />
+<img src="docs/screenshots/staff-assigned-issue-details.png" width="340" alt="Staff issue details" />
 
 </div>
--->
-
-| File | Screen |
-|---|---|
-| `login.png` | Login page |
-| `student-dashboard.png` | Student dashboard |
-| `report-issue.png` | Report issue form |
-| `issue-details.png` | Issue details |
-| `admin-analytics.png` | Admin analytics charts |
-| `admin-issues.png` | Admin issues list |
-| `staff-dashboard.png` | Staff dashboard |
-| `notifications.png` | Notification bell/dropdown |
-| `audit-logs.png` | Admin audit logs |
 
 ## License
 
