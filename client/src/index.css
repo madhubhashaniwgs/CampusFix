@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 * {
   box-sizing: border-box;
@@ -6,6 +6,12 @@
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #F5F3FF;
+  font-family:
+    'Plus Jakarta Sans',
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  background-color: #f9f7fd;
+  color: #1e1338;
 }

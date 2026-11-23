@@ -1,42 +1,28 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
+// All auth calls go through apiClient so they automatically
+// include credentials (cookies) and the CSRF token header.
 export const registerUser = async (userData) => {
-  const response = await API.post('/auth/register', userData);
+  const response = await apiClient.post('/auth/register', userData);
   return response.data;
 };
 
 export const loginUser = async (credentials) => {
-  const response = await API.post('/auth/login', credentials);
+  const response = await apiClient.post('/auth/login', credentials);
   return response.data;
 };
 
-export const getCurrentUser = async (token) => {
-  const response = await API.get('/auth/me', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
+export const getCurrentUser = async () => {
+  const response = await apiClient.get('/auth/me');
   return response.data;
 };
 
-export const logoutUser = async (token) => {
-  const response = await API.post(
-    '/auth/logout',
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+export const logoutUser = async () => {
+  const response = await apiClient.post('/auth/logout');
+  return response.data;
+};
 
+export const changePassword = async (passwords) => {
+  const response = await apiClient.post('/auth/change-password', passwords);
   return response.data;
 };

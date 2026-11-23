@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbf9fe" />
+      <stop offset="45%" stop-color="#f3ebfc" />
+      <stop offset="100%" stop-color="#ebe0f9" />
+    </linearGradient>
+
+    <radialGradient id="meshGrad1" cx="20%" cy="25%" r="50%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="meshGrad2" cx="80%" cy="80%" r="55%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.20" />
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#fdfcff" stop-opacity="0.85" />
+    </linearGradient>
+
+    <linearGradient id="primaryAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#581c87" flood-opacity="0.10" />
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#581c87" flood-opacity="0.05" />
+    </filter>
+
+    <!-- Blueprint Grid Pattern -->
+    <pattern id="campusGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#9333ea" stroke-width="0.75" stroke-opacity="0.07" />
+      <circle cx="16" cy="16" r="1" fill="#7e22ce" fill-opacity="0.12" />
+    </pattern>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="800" height="450" fill="url(#bgGrad)" />
+  <rect width="800" height="450" fill="url(#campusGrid)" />
+  <rect width="800" height="450" fill="url(#meshGrad1)" />
+  <rect width="800" height="450" fill="url(#meshGrad2)" />
+
+  <!-- Subtle Campus Facility Silhouettes in Background -->
+  <g fill="#7c3aed" fill-opacity="0.05">
+    <!-- Campus Clock Tower / Admin Hall -->
+    <polygon points="120,380 120,240 145,210 170,240 170,380" />
+    <rect x="140" y="245" width="10" height="15" rx="3" fill="#6d28d9" fill-opacity="0.08" />
+    <!-- Library / Science Block -->
+    <rect x="190" y="270" width="120" height="110" rx="4" />
+    <rect x="205" y="290" width="20" height="30" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <rect x="240" y="290" width="20" height="30" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <rect x="275" y="290" width="20" height="30" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <!-- Right Tech Wing -->
+    <rect x="490" y="260" width="150" height="120" rx="4" />
+    <rect x="510" y="280" width="25" height="25" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <rect x="550" y="280" width="25" height="25" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <rect x="590" y="280" width="25" height="25" rx="2" fill="#ffffff" fill-opacity="0.4" />
+    <polygon points="650,380 650,230 675,200 700,230 700,380" />
+  </g>
+
+  <!-- Ambient Decorative Tech & Facility Glyphs -->
+  <g stroke="#9333ea" stroke-opacity="0.25" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Electrical Zap -->
+    <path d="M 90 90 L 80 115 L 100 115 L 90 145" transform="scale(0.8) translate(20, 20)" />
+    <!-- Droplets -->
+    <path d="M 710 110 C 710 120 702 128 692 128 C 682 128 674 120 674 110 C 674 96 692 78 692 78 C 692 78 710 96 710 110 Z" transform="scale(0.8) translate(180, 20)" />
+    <!-- Wrench -->
+    <path d="M 690 350 L 730 390 M 705 335 C 695 340 690 350 695 360 L 725 390 C 735 395 745 390 750 380 L 735 365" transform="scale(0.7) translate(300, 140)" />
+    <!-- Gear/Settings -->
+    <circle cx="100" cy="360" r="18" stroke-dasharray="6,4" />
+  </g>
+
+  <!-- Central Frosted Focus Card -->
+  <g filter="url(#softShadow)">
+    <rect x="230" y="95" width="340" height="260" rx="28" fill="url(#cardGrad)" stroke="#d8b4fe" stroke-width="1.75" />
+    
+    <!-- Top Card Micro Pill -->
+    <rect x="310" y="115" width="180" height="24" rx="12" fill="#f3e8ff" stroke="#e9d5ff" stroke-width="1" />
+    <text x="400" y="131" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="10.5" font-weight="800" fill="#7e22ce" text-anchor="middle" letter-spacing="1.2">
+      CAMPUSFIX • REPORT
+    </text>
+
+    <!-- Modern Camera / Image Placeholder Graphic -->
+    <g transform="translate(400, 205)">
+      <!-- Outer Accent Ring -->
+      <circle cx="0" cy="0" r="44" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5" />
+      <circle cx="0" cy="0" r="36" fill="url(#primaryAccent)" />
+      
+      <!-- Camera Vector with Landscape & Sun -->
+      <g fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(-16, -16) scale(1.33)">
+        <!-- Landscape Photo Frame -->
+        <rect x="2" y="3" width="20" height="18" rx="3" />
+        <circle cx="7.5" cy="8.5" r="1.5" fill="#ffffff" stroke="none" />
+        <path d="M 21 16 L 16 11 L 8 19" />
+        <path d="M 2 17 L 6 13 L 11 18" />
+      </g>
+
+      <!-- Gentle Slash / No-Photo Badge -->
+      <circle cx="28" cy="24" r="14" fill="#ef4444" stroke="#ffffff" stroke-width="2.5" />
+      <line x1="20" y1="24" x2="36" y2="24" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+    </g>
+
+    <!-- Typography -->
+    <text x="400" y="290" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="16" font-weight="800" fill="#2e1065" text-anchor="middle">
+      No Photo Submitted
+    </text>
+
+    <text x="400" y="312" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="11.5" font-weight="600" fill="#6b21a8" fill-opacity="0.75" text-anchor="middle">
+      Facility ticket created without an image
+    </text>
+
+    <text x="400" y="332" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="10" font-weight="700" fill="#a855f7" text-anchor="middle" letter-spacing="0.5">
+      INSPECTION CAN BE ADDED BY ASSIGNED STAFF
+    </text>
+  </g>
+
+  <!-- Bottom Accent Bar -->
+  <rect x="0" y="444" width="800" height="6" fill="url(#primaryAccent)" />
+</svg>
+

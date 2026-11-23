@@ -1,51 +1,67 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ShieldCheck,
   ArrowLeft,
   MapPin,
-  CalendarDays,
-  User,
-  Clock,
-  CheckCircle,
-  Circle,
-  RefreshCw,
+  Calendar,
+  UserRound,
+  CheckCircle2,
   AlertCircle,
-  ClipboardList,
+  Copy,
+  Check,
   Send,
+  Sparkles,
+  MessageSquare,
+  Image as ImageIcon,
 } from 'lucide-react';
 
-import {
-  getIssueById,
-  updateIssueStatus,
-} from '../../services/issueService';
+import AppLayout from '../../components/layouts/AppLayout';
+import StatusBadge from '../../components/common/StatusBadge';
+import PriorityBadge from '../../components/common/PriorityBadge';
+import CategoryBadge from '../../components/common/CategoryBadge';
+import ImageModal from '../../components/common/ImageModal';
+import IssuePhoto from '../../components/common/IssuePhoto';
+import { getIssueById, updateIssueStatus } from '../../services/issueService';
+import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
-import './StaffIssueDetailsPage.css';
+const STATUS_STEPS = [
+  { key: 'reported', label: 'Reported' },
+  { key: 'assigned', label: 'Assigned' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'resolved', label: 'Resolved' },
+];
 
-function StaffIssueDetailsPage() {
+const QUICK_NOTES = [
+  'Inspected on site, maintenance initiated.',
+  'Awaiting parts/replacement supplies.',
+  'Work currently in progress with technician.',
+  'Issue resolved and functionality verified.',
+];
+
+export default function StaffIssueDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { success, error: toastError } = useToast();
 
   const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [note, setNote] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const fetchIssue = async () => {
     try {
       setLoading(true);
       setError('');
-
-      const response = await getIssueById(id);
-      setIssue(response.data);
+      const res = await getIssueById(id);
+      setIssue(res.data);
+      setSelectedStatus(res.data?.status || 'in_progress');
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Unable to load issue details.'
-      );
+      setError(err.response?.data?.message || 'Unable to load issue details.');
     } finally {
       setLoading(false);
     }
@@ -55,404 +71,393 @@ function StaffIssueDetailsPage() {
     fetchIssue();
   }, [id]);
 
-  const handleStatusUpdate = async (newStatus) => {
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssue
+  );
+
+  const handleStatusUpdate = async (statusToSet = selectedStatus) => {
     try {
       setUpdating(true);
-      setError('');
-      setSuccess('');
-
-      await updateIssueStatus(id, newStatus, note.trim());
-
-      setSuccess(
-        `Issue status updated to ${formatStatus(newStatus)} successfully.`
-      );
+      await updateIssueStatus(id, statusToSet, note.trim());
+      success(`Status updated to ${statusToSet.replace('_', ' ')} successfully!`);
       setNote('');
-
       await fetchIssue();
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Unable to update issue status.'
-      );
+      toastError(err.response?.data?.message || 'Failed to update issue status.');
     } finally {
       setUpdating(false);
     }
   };
 
-  const formatStatus = (status) => {
-    return status
-      ?.replaceAll('_', ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+  const handleCopyTicket = async () => {
+    if (!issue?.ticketId) return;
+    try {
+      await navigator.clipboard.writeText(issue.ticketId);
+      setCopied(true);
+      success('Ticket ID copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toastError('Could not copy to clipboard.');
+    }
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
+  const getStepStatus = (stepKey) => {
+    if (!issue) return 'upcoming';
+    const order = ['reported', 'assigned', 'in_progress', 'resolved'];
+    const currentIdx = order.indexOf(issue.status);
+    const stepIdx = order.indexOf(stepKey);
 
-    return new Date(date).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (stepIdx < currentIdx) return 'completed';
+    if (stepIdx === currentIdx) return 'current';
+    return 'upcoming';
   };
-
-  const progressSteps = [
-    { value: 'reported', label: 'Reported' },
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'resolved', label: 'Resolved' },
-  ];
-
-  const getProgressIndex = () => {
-    if (!issue) return -1;
-
-    if (issue.status === 'rejected') return -1;
-
-    return progressSteps.findIndex(
-      (step) => step.value === issue.status
-    );
-  };
-
-  const currentProgressIndex = getProgressIndex();
-
-  if (loading) {
-    return (
-      <div className="staff-detail-state">
-        <div className="staff-detail-spinner" />
-        <p>Loading issue details...</p>
-      </div>
-    );
-  }
-
-  if (!issue) {
-    return (
-      <div className="staff-detail-state">
-        <AlertCircle size={35} />
-        <h2>Issue Not Found</h2>
-        <p>{error || 'Unable to find this issue.'}</p>
-        <button
-          onClick={() => navigate('/staff/issues')}
-          className="staff-detail-back-button"
-        >
-          <ArrowLeft size={17} />
-          Back to Assigned Issues
-        </button>
-      </div>
-    );
-  }
 
   return (
-    <div className="staff-detail-page">
-      <header className="staff-detail-header">
-        <div className="staff-detail-brand">
-          <div className="staff-detail-brand-icon">
-            <ShieldCheck size={24} />
-          </div>
-          <span>CampusFix</span>
-          <span className="staff-detail-portal-label">
-            STAFF PORTAL
-          </span>
-        </div>
+    <AppLayout activeNav="issues">
+      <ImageModal
+        isOpen={photoModalOpen}
+        src={issue?.photo}
+        title={`${issue?.ticketId || 'Issue'} - Photo Inspection`}
+        onClose={() => setPhotoModalOpen(false)}
+      />
 
+      {/* Navigation Breadcrumbs */}
+      <div className="flex items-center gap-2 text-xs font-bold text-purple-700/80 mb-6">
         <button
-          className="staff-detail-back-button"
           onClick={() => navigate('/staff/issues')}
+          className="hover:text-purple-950 transition-colors flex items-center gap-1"
         >
-          <ArrowLeft size={17} />
-          Back to Issues
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Assigned Issues
         </button>
-      </header>
+        <span>/</span>
+        <span className="font-mono text-purple-900 font-black">{issue?.ticketId || 'Details'}</span>
+      </div>
 
-      <main className="staff-detail-content">
-        <div className="staff-detail-heading">
-          <div>
-            <span className="staff-detail-eyebrow">
-              ISSUE MANAGEMENT
-            </span>
-            <h1>Issue Details</h1>
-            <p>Review the issue and update its progress.</p>
-          </div>
-
-          <button
-            className="staff-detail-refresh-button"
-            onClick={fetchIssue}
-            disabled={loading || updating}
-          >
-            <RefreshCw size={17} />
-            Refresh
-          </button>
+      {loading ? (
+        <div className="py-24 text-center">
+          <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-purple-900/70 font-semibold">Loading ticket details...</p>
         </div>
-
-        {error && (
-          <div className="staff-detail-alert error">
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="staff-detail-alert success">
-            <CheckCircle size={18} />
-            {success}
-          </div>
-        )}
-
-        <section className="staff-detail-main-card">
-          <div className="staff-detail-card-header">
-            <div>
-              <span className="staff-detail-ticket">
-                {issue.ticketId}
-              </span>
-              <h2>{issue.title}</h2>
-            </div>
-
-            <span
-              className={`staff-detail-status ${issue.status}`}
-            >
-              {formatStatus(issue.status)}
-            </span>
-          </div>
-
-          <div className="staff-detail-description">
-            <h3>Description</h3>
-            <p>{issue.description}</p>
-          </div>
-
-          <div className="staff-detail-info-grid">
-            <div className="staff-detail-info-item">
-              <ClipboardList size={19} />
-              <div>
-                <span>Category</span>
-                <strong>{issue.category}</strong>
-              </div>
-            </div>
-
-            <div className="staff-detail-info-item">
-              <MapPin size={19} />
-              <div>
-                <span>Location</span>
-                <strong>{issue.location}</strong>
-              </div>
-            </div>
-
-            <div className="staff-detail-info-item">
-              <AlertCircle size={19} />
-              <div>
-                <span>Priority</span>
-                <strong className={`staff-detail-priority ${issue.priority}`}>
-                  {issue.priority}
-                </strong>
-              </div>
-            </div>
-
-            <div className="staff-detail-info-item">
-              <CalendarDays size={19} />
-              <div>
-                <span>Reported Date</span>
-                <strong>{formatDate(issue.createdAt)}</strong>
-              </div>
-            </div>
-
-            <div className="staff-detail-info-item">
-              <Clock size={19} />
-              <div>
-                <span>Last Updated</span>
-                <strong>{formatDate(issue.updatedAt)}</strong>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="staff-detail-section-card">
-          <h2 className="staff-detail-section-heading">
-            Reported By
-          </h2>
-
-          <div className="staff-detail-person">
-            <div className="staff-detail-person-icon">
-              <User size={21} />
-            </div>
-            <div>
-              <strong>
-                {issue.reportedBy?.fullName || 'N/A'}
-              </strong>
-              <span>
-                {issue.reportedBy?.email || 'N/A'}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="staff-detail-section-card">
-          <h2 className="staff-detail-section-heading">
-            Issue Progress
-          </h2>
-
-          {issue.status === 'rejected' ? (
-            <div className="staff-detail-rejected">
-              This issue has been rejected.
-            </div>
-          ) : (
-            <div className="staff-detail-progress">
-              {progressSteps.map((step, index) => {
-                const completed = index <= currentProgressIndex;
-                const current = index === currentProgressIndex;
-
-                return (
-                  <div
-                    className="staff-detail-progress-step"
-                    key={step.value}
-                  >
-                    <div
-                      className={`staff-detail-progress-icon ${
-                        completed ? 'completed' : ''
-                      } ${current ? 'current' : ''}`}
-                    >
-                      {completed ? (
-                        <CheckCircle size={20} />
-                      ) : (
-                        <Circle size={20} />
-                      )}
-                    </div>
-
-                    <span className={completed ? 'completed' : ''}>
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="staff-detail-section-card">
-          <h2 className="staff-detail-section-heading">
-            Update Issue Status
-          </h2>
-
-          {issue.status === 'assigned' && (
-            <>
-              <p className="staff-detail-update-description">
-                Start working on this issue when you begin handling it.
-              </p>
-
-              <textarea
-                className="staff-detail-note-input"
-                placeholder="Add an optional progress note..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-                disabled={updating}
-              />
-
-              <button
-                className="staff-detail-update-button"
-                onClick={() => handleStatusUpdate('in_progress')}
-                disabled={updating}
-              >
-                <RefreshCw size={17} />
-                {updating ? 'Updating...' : 'Start Working'}
-              </button>
-            </>
-          )}
-
-          {issue.status === 'in_progress' && (
-            <>
-              <p className="staff-detail-update-description">
-                Mark this issue as resolved after completing the work.
-              </p>
-
-              <textarea
-                className="staff-detail-note-input"
-                placeholder="Describe the work completed..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-                disabled={updating}
-              />
-
-              <button
-                className="staff-detail-resolve-button"
-                onClick={() => handleStatusUpdate('resolved')}
-                disabled={updating}
-              >
-                <CheckCircle size={17} />
-                {updating ? 'Updating...' : 'Mark as Resolved'}
-              </button>
-            </>
-          )}
-
-          {issue.status === 'resolved' && (
-            <div className="staff-detail-completed">
-              <CheckCircle size={20} />
-              This issue has been successfully resolved.
-            </div>
-          )}
-
-          {issue.status === 'rejected' && (
-            <div className="staff-detail-completed rejected">
-              This issue is rejected and cannot be updated.
-            </div>
-          )}
-        </section>
-
-        <section className="staff-detail-section-card">
-          <h2 className="staff-detail-section-heading">
-            Status History
-          </h2>
-
-          {issue.statusHistory?.length > 0 ? (
-            <div className="staff-detail-history">
-              {[...issue.statusHistory]
-                .reverse()
-                .map((history, index) => (
-                  <div
-                    className="staff-detail-history-item"
-                    key={`${history._id || history.updatedAt}-${index}`}
-                  >
-                    <div className="staff-detail-history-dot" />
-
-                    <div>
-                      <strong>
-                        {formatStatus(history.status)}
-                      </strong>
-
-                      <span>
-                        Updated by{' '}
-                        {history.updatedBy?.fullName || 'System'}
-                      </span>
-
-                      {history.note && (
-                        <p>{history.note}</p>
-                      )}
-
-                      <small>
-                        {formatDate(history.updatedAt)}
-                      </small>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <p className="staff-detail-no-history">
-              No status history available.
-            </p>
-          )}
-        </section>
-
-        <div className="staff-detail-footer">
+      ) : error || !issue ? (
+        <div className="purple-card rounded-3xl border border-rose-200 p-8 text-center max-w-lg mx-auto">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-purple-950 mb-1">Issue Not Found</h2>
+          <p className="text-sm text-purple-900/70 mb-4">
+            {error || 'This work order could not be found.'}
+          </p>
           <button
-            className="staff-detail-back-button"
             onClick={() => navigate('/staff/issues')}
+            className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold rounded-xl transition-colors"
           >
-            <ArrowLeft size={17} />
             Back to Assigned Issues
           </button>
         </div>
-      </main>
-    </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="purple-card rounded-3xl p-6 sm:p-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-purple-100">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    onClick={handleCopyTicket}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-300 font-mono text-xs font-black text-purple-900 transition-colors group"
+                    title="Copy Ticket ID"
+                  >
+                    <span>{issue.ticketId}</span>
+                    {copied ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-800" />
+                    )}
+                  </button>
+
+                  <CategoryBadge category={issue.category} />
+                  <PriorityBadge priority={issue.priority} />
+                </div>
+
+                <h1 className="text-xl sm:text-2xl font-black text-purple-950 tracking-tight">
+                  {issue.title}
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <StatusBadge status={issue.status} size="lg" />
+              </div>
+            </div>
+
+            {/* Visual 4-Step Progress */}
+            <div className="pt-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {STATUS_STEPS.map((step, idx) => {
+                  const state = getStepStatus(step.key);
+                  const isDone = state === 'completed';
+                  const isCurrent = state === 'current';
+
+                  return (
+                    <div key={step.key} className="flex flex-col items-center text-center">
+                      <div
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs mb-1.5 transition-all ${
+                          isDone
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                            : isCurrent
+                              ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
+                              : 'bg-purple-100/70 text-purple-400 border border-purple-200'
+                        }`}
+                      >
+                        {isDone ? <CheckCircle2 className="w-4 h-4" /> : <span>{idx + 1}</span>}
+                      </div>
+                      <p
+                        className={`text-xs font-black ${isCurrent ? 'text-purple-900' : isDone ? 'text-purple-950' : 'text-purple-400'}`}
+                      >
+                        {step.label}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Action Section: Status Controller & Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left 2 Cols: Status Update Controls & Notes */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Technician Action Panel */}
+              <div className="purple-card rounded-3xl p-6 sm:p-7 border border-purple-300">
+                <div className="flex items-center justify-between pb-4 mb-4 border-b border-purple-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-700" />
+                    <h3 className="text-base font-black text-purple-950">
+                      Update Work Order Status
+                    </h3>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                    Live Action
+                  </span>
+                </div>
+
+                {/* Status Toggle Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                  {[
+                    { id: 'assigned', label: 'Assigned', desc: 'Acknowledged' },
+                    { id: 'in_progress', label: 'In Progress', desc: 'Active repair' },
+                    { id: 'resolved', label: 'Resolved', desc: 'Finished & tested' },
+                  ].map((s) => {
+                    const isSelected = selectedStatus === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSelectedStatus(s.id)}
+                        className={`p-3.5 rounded-2xl border text-left transition-all ${
+                          isSelected
+                            ? 'border-purple-600 bg-purple-100/90 ring-2 ring-purple-600/20 shadow-xs'
+                            : 'border-purple-200 hover:border-purple-300 bg-white/70'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-purple-950">{s.label}</span>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-purple-700" />}
+                        </div>
+                        <p className="text-[11px] text-purple-700/80 font-medium">{s.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quick note presets */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5 text-xs">
+                    <span className="font-bold text-purple-950">
+                      Add Maintenance Note (Optional)
+                    </span>
+                    <span className="text-purple-700 font-semibold">Quick presets:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    {QUICK_NOTES.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setNote(preset)}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold border border-purple-200 transition-colors text-left"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Describe what was repaired, replacement parts used, or testing performed..."
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-purple-200 bg-white/90 text-purple-950 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none transition-all placeholder:text-purple-400 resize-none font-medium"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => handleStatusUpdate(selectedStatus)}
+                    disabled={updating}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {updating ? (
+                      <>Saving...</>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        Apply Status Update
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Description Card */}
+              <div className="purple-card rounded-3xl p-6 sm:p-7">
+                <h3 className="text-sm font-black uppercase tracking-wider text-purple-950 mb-3">
+                  Reported Issue Description
+                </h3>
+                <p className="text-sm text-purple-950 whitespace-pre-wrap leading-relaxed font-medium">
+                  {issue.description}
+                </p>
+              </div>
+
+              {/* Audit / Status History */}
+              <div className="purple-card rounded-3xl p-6 sm:p-7">
+                <div className="flex items-center gap-2 mb-6">
+                  <MessageSquare className="w-4 h-4 text-purple-700" />
+                  <h3 className="text-sm font-black uppercase tracking-wider text-purple-950">
+                    Activity & Audit Log
+                  </h3>
+                </div>
+
+                <div className="relative border-l-2 border-purple-200 ml-4 space-y-6 pl-6">
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white bg-purple-700 shadow-xs" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-purple-950">Issue Reported</span>
+                        <span className="text-[11px] text-purple-700">
+                          {new Date(issue.createdAt).toLocaleString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-purple-800/80 font-medium mt-0.5">
+                        Reported by {issue.reportedBy?.fullName || 'Student'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {issue.statusHistory?.map((hist, i) => (
+                    <div key={i} className="relative">
+                      <span className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white bg-indigo-600 shadow-xs" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={hist.status} size="sm" />
+                          <span className="text-[11px] text-purple-700">
+                            {new Date(hist.updatedAt).toLocaleString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        {hist.note && (
+                          <div className="mt-2 p-3 bg-purple-50/80 rounded-xl border border-purple-200 text-xs text-purple-950 font-medium">
+                            <span className="font-bold text-purple-900">Note: </span>
+                            {hist.note}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Location & Reporter Meta */}
+            <div className="space-y-6">
+              {/* Attached Photo Card (with Placeholder fallback) */}
+              <div className="purple-card rounded-3xl p-6 overflow-hidden">
+                <h3 className="text-sm font-extrabold text-purple-950 mb-3 flex items-center justify-between">
+                  <span>Attached Photo</span>
+                  {issue.photo && (
+                    <button
+                      onClick={() => setPhotoModalOpen(true)}
+                      className="text-xs text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> Inspect
+                    </button>
+                  )}
+                </h3>
+                <IssuePhoto
+                  src={issue.photo}
+                  alt={issue.title}
+                  category={issue.category}
+                  variant="detail"
+                  onClick={() => issue.photo && setPhotoModalOpen(true)}
+                />
+              </div>
+
+              <div className="purple-card rounded-3xl p-6 space-y-4">
+                <h3 className="text-sm font-extrabold text-purple-950 pb-2 border-b border-purple-100">
+                  Location & Contact Details
+                </h3>
+
+                <div className="space-y-3.5 text-xs">
+                  <div>
+                    <span className="text-purple-700/80 block mb-1 font-bold">Campus Location</span>
+                    <div className="flex items-center gap-2 font-black text-purple-950">
+                      <MapPin className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      <span>{issue.location}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-purple-100">
+                    <span className="text-purple-700/80 block mb-1 font-bold">Reported By</span>
+                    <div className="flex items-center gap-2 font-black text-purple-950">
+                      <UserRound className="w-4 h-4 text-purple-700 flex-shrink-0" />
+                      <span>{issue.reportedBy?.fullName || 'Student'}</span>
+                    </div>
+                    {issue.reportedBy?.email && (
+                      <span className="text-[11px] text-purple-700 pl-6 block font-medium">
+                        {issue.reportedBy.email}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-purple-100">
+                    <span className="text-purple-700/80 block mb-1 font-bold">Reported On</span>
+                    <div className="flex items-center gap-2 font-black text-purple-950">
+                      <Calendar className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      <span>
+                        {new Date(issue.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
   );
 }
-
-export default StaffIssueDetailsPage;

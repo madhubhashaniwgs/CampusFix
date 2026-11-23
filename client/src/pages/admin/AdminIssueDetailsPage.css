@@ -1,4 +1,3 @@
-
 /* =========================================
    CAMPUSFIX - ADMIN ISSUE DETAILS PAGE
 ========================================= */
@@ -367,7 +366,7 @@
 }
 
 .admin-detail-progress-step::before {
-  content: "";
+  content: '';
   position: absolute;
   z-index: -1;
   top: 17px;
@@ -456,7 +455,7 @@
 }
 
 .admin-detail-history-item:not(:last-child)::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 17px;
   left: 6px;
