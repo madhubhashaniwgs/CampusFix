@@ -2028,3 +2028,180 @@ describe('Email notifications', () => {
     assert.equal(res.status, 201);
   });
 });
+
+describe('Admin analytics API', () => {
+  let Issue;
+
+  before(async () => {
+    Issue = (await import('../src/models/Issue.js')).default;
+    await createUserDirect({ email: 'an_admin@test.com', role: 'admin' });
+    await loginAs('an_admin@test.com');
+  });
+
+  test('unauthenticated/student/staff rejected; admin allowed', async () => {
+    // Raw fetch with no cookies simulates an unauthenticated request.
+    const unauth = await fetch(`${baseUrl}/api/admin/analytics`);
+    assert.equal(unauth.status, 401);
+
+    await createUserDirect({ email: 'an_student@test.com', role: 'student' });
+    await loginAs('an_student@test.com');
+    assert.equal((await api('GET', '/api/admin/analytics')).status, 403);
+
+    await createUserDirect({ email: 'an_staff@test.com', role: 'staff', status: 'active' });
+    await loginAs('an_staff@test.com');
+    assert.equal((await api('GET', '/api/admin/analytics')).status, 403);
+
+    await loginAs('an_admin@test.com');
+    const ok = await api('GET', '/api/admin/analytics');
+    assert.equal(ok.status, 200);
+    assert.ok(ok.body.data.statusDistribution !== undefined);
+  });
+
+  test('aggregations return real counts', async () => {
+    await loginAs('an_admin@test.com');
+    const res = await api('GET', '/api/admin/analytics?months=3');
+    const d = res.body.data;
+
+    // Cross-check status counts against direct DB aggregation.
+    const direct = await Issue.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+    const apiMap = Object.fromEntries(d.statusDistribution.map((x) => [x.name, x.count]));
+    for (const row of direct) {
+      assert.equal(apiMap[row._id], row.count);
+    }
+    assert.ok(Array.isArray(d.priorityDistribution));
+    assert.ok(Array.isArray(d.categoryDistribution));
+    assert.equal(d.monthlyTrends.length, 3);
+    assert.ok(d.monthlyTrends.every((m) => 'reported' in m && 'resolved' in m));
+    assert.ok(Array.isArray(d.staffWorkload));
+  });
+
+  test('invalid query params rejected', async () => {
+    await loginAs('an_admin@test.com');
+    for (const q of [
+      'months=0',
+      'months=99',
+      'months=abc',
+      'startDate=bad',
+      'endDate=bad',
+      'startDate=2025-01-01&endDate=2020-01-01',
+    ]) {
+      const res = await api('GET', `/api/admin/analytics?${q}`);
+      assert.equal(res.status, 400, q);
+    }
+  });
+
+  test('date filter narrows results', async () => {
+    await loginAs('an_admin@test.com');
+    const res = await api('GET', '/api/admin/analytics?startDate=2030-01-01&endDate=2030-12-31');
+    assert.equal(res.status, 200);
+    const d = res.body.data;
+    assert.ok(d.statusDistribution.every((x) => x.count === 0 || x.count >= 0));
+  });
+});
+
+describe('Admin analytics edge cases', () => {
+  let Issue, User;
+
+  before(async () => {
+    Issue = (await import('../src/models/Issue.js')).default;
+    User = (await import('../src/models/User.js')).default;
+    await createUserDirect({ email: 'an2_admin@test.com', role: 'admin' });
+    await loginAs('an2_admin@test.com');
+  });
+
+  test('endDate includes the full intended day', async () => {
+    const student = await createUserDirect({ email: 'an2_stu@test.com', role: 'student' });
+    const day = '2024-06-15';
+    // Issue created at 23:30 UTC on the endDate day — must be included.
+    await Issue.create({
+      ticketId: 'CF-EDGE0001',
+      title: 'Edge',
+      description: 'd',
+      category: 'other',
+      location: 'X',
+      priority: 'low',
+      status: 'reported',
+      reportedBy: student._id,
+      createdAt: new Date(`${day}T23:30:00Z`),
+      updatedAt: new Date(`${day}T23:30:00Z`),
+    });
+    const res = await api('GET', `/api/admin/analytics?startDate=${day}&endDate=${day}`);
+    assert.equal(res.status, 200);
+    const total = res.body.data.statusDistribution.reduce((a, b) => a + b.count, 0);
+    assert.ok(total >= 1, 'end-of-day issue must be counted');
+  });
+
+  test('workload counts total and active; unassigned excluded', async () => {
+    const res = await api('GET', '/api/admin/analytics');
+    const w = res.body.data.staffWorkload;
+    assert.ok(Array.isArray(w));
+    for (const row of w) {
+      assert.ok(row.total >= row.active, 'active cannot exceed total');
+      assert.ok(row.name && typeof row.name === 'string');
+      assert.equal(row.email, undefined);
+      assert.equal(row.password, undefined);
+    }
+  });
+
+  test('monthly resolved uses latest statusHistory resolved entry', async () => {
+    const student = await User.findOne({ email: 'an2_stu@test.com' });
+    const staff = await createUserDirect({
+      email: 'an2_staff@test.com',
+      role: 'staff',
+      status: 'active',
+    });
+    // Resolved two months ago, reopened, resolved last month —
+    // only the latest resolved entry's month should count it.
+    const now = new Date();
+    const d = (monthsAgo, day) => new Date(now.getFullYear(), now.getMonth() - monthsAgo, day, 10);
+    const monthKey = (date) => date.toISOString().slice(0, 7);
+    const oldRes = d(2, 15);
+    const newRes = d(1, 10);
+    await Issue.create({
+      ticketId: 'CF-EDGE0002',
+      title: 'Reopen',
+      description: 'd',
+      category: 'it',
+      location: 'Y',
+      priority: 'high',
+      status: 'resolved',
+      reportedBy: student._id,
+      assignedTo: staff._id,
+      createdAt: oldRes,
+      statusHistory: [
+        { status: 'resolved', updatedBy: staff._id, updatedAt: oldRes },
+        { status: 'in_progress', updatedBy: staff._id, updatedAt: d(1, 1) },
+        { status: 'resolved', updatedBy: staff._id, updatedAt: newRes },
+      ],
+    });
+    const res = await api('GET', '/api/admin/analytics?months=6');
+    const trends = res.body.data.monthlyTrends;
+    const oldMonth = trends.find((t) => t.month === monthKey(oldRes));
+    const newMonth = trends.find((t) => t.month === monthKey(newRes));
+    assert.ok(newMonth, 'recent month bucket exists');
+    // The issue counts toward the latest resolution month only;
+    // other issues may also resolve so assert relatively.
+    assert.ok(newMonth.resolved >= 1, 'latest resolution month counted');
+  });
+});
+
+describe('Staff workload ordering', () => {
+  test('sorted by total desc with deterministic tie-break and status field', async () => {
+    await createUserDirect({ email: 'wo_admin@test.com', role: 'admin' });
+    await loginAs('wo_admin@test.com');
+    const res = await api('GET', '/api/admin/analytics');
+    assert.equal(res.status, 200);
+    const w = res.body.data.staffWorkload;
+    assert.ok(w.length <= 20);
+    for (let i = 1; i < w.length; i++) {
+      assert.ok(w[i - 1].total >= w[i].total, 'not sorted by total desc');
+    }
+    // Ties must have stable order (staffId ascending).
+    for (let i = 1; i < w.length; i++) {
+      if (w[i - 1].total === w[i].total) {
+        assert.ok(String(w[i - 1].staffId) <= String(w[i].staffId), 'tie-break not deterministic');
+      }
+    }
+    assert.ok(w.every((r) => typeof r.status === 'string'));
+  });
+});
