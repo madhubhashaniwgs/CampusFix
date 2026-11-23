@@ -61,8 +61,8 @@ export default function AdminDashboardPage() {
       const [issuesRes, staffRes, total, reported, assigned, inProgress, resolved, unassigned] =
         await Promise.all([
           getIssues({
-            status: 'reported,assigned,in_progress',
-            limit: 6,
+            dateFrom: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            limit: 8,
           }),
           getStaffMembers().catch(() => ({ data: [] })),
           getIssueCount(),
@@ -117,7 +117,7 @@ export default function AdminDashboardPage() {
     try {
       setAssigningId(issueId);
       await assignIssue(issueId, staffId);
-      const assignedStaff = staffMembers.find((s) => s._id === staffId);
+      const assignedStaff = staffMembers.find((s) => (s.id || s._id) === staffId);
       success(
         `Assigned to ${assignedStaff?.fullName || 'Technician'} successfully!`,
         'Staff Assigned'
@@ -388,7 +388,7 @@ export default function AdminDashboardPage() {
                       >
                         <option value="">+ Assign Staff</option>
                         {staffMembers.map((staff) => (
-                          <option key={staff._id} value={staff._id}>
+                          <option key={staff.id || staff._id} value={staff.id || staff._id}>
                             {staff.fullName}
                           </option>
                         ))}

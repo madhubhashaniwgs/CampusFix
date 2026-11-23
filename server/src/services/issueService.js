@@ -118,6 +118,27 @@ class IssueService {
           issueId: created._id,
         });
 
+        // Notify all admins about the new issue (best-effort).
+        try {
+          const { users: admins } = await userRepository.findUsers({
+            role: 'admin',
+            limit: 100,
+          });
+          await Promise.allSettled(
+            admins.map((admin) =>
+              notificationService.create({
+                userId: admin._id,
+                type: 'issue_created',
+                title: 'New issue reported',
+                message: `${created.reportedBy?.fullName || 'A student'} reported ${created.ticketId}: ${created.title}`,
+                issueId: created._id,
+              })
+            )
+          );
+        } catch {
+          // Admin notification failure must not break issue creation.
+        }
+
         // Notify the reporting student. Email failure must never
         // break issue creation.
         const reporterEmail = created.reportedBy?.email;
@@ -309,6 +330,29 @@ class IssueService {
       message: `Issue ${issue.ticketId} is now ${status.replace('_', ' ')}.`,
       issueId,
     });
+
+    // Notify admins (except the actor) about meaningful status changes.
+    try {
+      const { users: admins } = await userRepository.findUsers({
+        role: 'admin',
+        limit: 100,
+      });
+      await Promise.allSettled(
+        admins
+          .filter((a) => a._id.toString() !== user.id)
+          .map((admin) =>
+            notificationService.create({
+              userId: admin._id,
+              type: 'issue_status_changed',
+              title: `Issue ${status === 'resolved' ? 'resolved' : status === 'rejected' ? 'rejected' : 'in progress'}`,
+              message: `Issue ${issue.ticketId} is now ${status.replace('_', ' ')}.`,
+              issueId,
+            })
+          )
+      );
+    } catch {
+      // Admin notification failure must not break the status update.
+    }
 
     // Notify the reporter on meaningful transitions only.
     if (['in_progress', 'resolved'].includes(status)) {
