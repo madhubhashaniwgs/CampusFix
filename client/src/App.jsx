@@ -1,7 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { useAuth } from './context/AuthContext';
-
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -16,40 +14,13 @@ import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import LandingPage from './pages/LandingPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffIssuesPage from './pages/staff/StaffIssuesPage';
 import StaffIssueDetailsPage from './pages/staff/StaffIssueDetailsPage';
 
-import { ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import './App.css';
-
-function HomeRedirect() {
-  const { user, isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/25 mb-4 animate-pulse">
-          <ShieldCheck className="w-6 h-6" />
-        </div>
-        <div className="w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-sm font-bold text-slate-700">Connecting to CampusFix...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const paths = {
-    student: '/student/dashboard',
-    staff: '/staff/dashboard',
-    admin: '/admin/dashboard',
-  };
-
-  return <Navigate to={paths[user.role] || '/login'} replace />;
-}
 
 function UnauthorizedPage() {
   return (
@@ -76,7 +47,7 @@ function UnauthorizedPage() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/" element={<LandingPage />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
