@@ -23,6 +23,7 @@ import ImageModal from '../../components/common/ImageModal';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssueById, updateIssueStatus } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported' },
@@ -69,6 +70,11 @@ export default function StaffIssueDetailsPage() {
   useEffect(() => {
     fetchIssue();
   }, [id]);
+
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssue
+  );
 
   const handleStatusUpdate = async (statusToSet = selectedStatus) => {
     try {
@@ -138,7 +144,9 @@ export default function StaffIssueDetailsPage() {
         <div className="purple-card rounded-3xl border border-rose-200 p-8 text-center max-w-lg mx-auto">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-purple-950 mb-1">Issue Not Found</h2>
-          <p className="text-sm text-purple-900/70 mb-4">{error || 'This work order could not be found.'}</p>
+          <p className="text-sm text-purple-900/70 mb-4">
+            {error || 'This work order could not be found.'}
+          </p>
           <button
             onClick={() => navigate('/staff/issues')}
             className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold rounded-xl transition-colors"
@@ -195,13 +203,15 @@ export default function StaffIssueDetailsPage() {
                           isDone
                             ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                             : isCurrent
-                            ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
-                            : 'bg-purple-100/70 text-purple-400 border border-purple-200'
+                              ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
+                              : 'bg-purple-100/70 text-purple-400 border border-purple-200'
                         }`}
                       >
                         {isDone ? <CheckCircle2 className="w-4 h-4" /> : <span>{idx + 1}</span>}
                       </div>
-                      <p className={`text-xs font-black ${isCurrent ? 'text-purple-900' : isDone ? 'text-purple-950' : 'text-purple-400'}`}>
+                      <p
+                        className={`text-xs font-black ${isCurrent ? 'text-purple-900' : isDone ? 'text-purple-950' : 'text-purple-400'}`}
+                      >
                         {step.label}
                       </p>
                     </div>
@@ -261,7 +271,9 @@ export default function StaffIssueDetailsPage() {
                 {/* Quick note presets */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1.5 text-xs">
-                    <span className="font-bold text-purple-950">Add Maintenance Note (Optional)</span>
+                    <span className="font-bold text-purple-950">
+                      Add Maintenance Note (Optional)
+                    </span>
                     <span className="text-purple-700 font-semibold">Quick presets:</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mb-2.5">

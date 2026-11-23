@@ -52,10 +52,7 @@ export const authenticate = async (req, res, next) => {
       return next(error);
     }
 
-    if (
-      error.name === 'JsonWebTokenError' ||
-      error.name === 'TokenExpiredError'
-    ) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
       return next(new ApiError(401, 'Invalid or expired token'));
     }
 
@@ -70,9 +67,7 @@ export const authorize = (...allowedRoles) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return next(
-        new ApiError(403, 'You do not have permission to perform this action')
-      );
+      return next(new ApiError(403, 'You do not have permission to perform this action'));
     }
 
     next();

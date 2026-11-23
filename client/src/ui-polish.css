@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
-@import "tailwindcss";
+@import 'tailwindcss';
 
 * {
   box-sizing: border-box;
@@ -12,7 +12,12 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Plus Jakarta Sans',
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   background-color: #f9f7fd;
   color: #1e1338;
   -webkit-font-smoothing: antialiased;
@@ -38,13 +43,17 @@ body {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(216, 180, 254, 0.45);
-  box-shadow: 0 10px 28px -8px rgba(109, 40, 217, 0.06), 0 2px 6px rgba(109, 40, 217, 0.02);
+  box-shadow:
+    0 10px 28px -8px rgba(109, 40, 217, 0.06),
+    0 2px 6px rgba(109, 40, 217, 0.02);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .purple-card:hover {
   border-color: rgba(168, 85, 247, 0.45);
-  box-shadow: 0 16px 36px -10px rgba(109, 40, 217, 0.12), 0 4px 12px rgba(109, 40, 217, 0.04);
+  box-shadow:
+    0 16px 36px -10px rgba(109, 40, 217, 0.12),
+    0 4px 12px rgba(109, 40, 217, 0.04);
 }
 
 /* Purple selection */
@@ -76,4 +85,127 @@ body {
 :focus-visible {
   outline: 2px solid #7c3aed;
   outline-offset: 2px;
+}
+
+/* Notification bell */
+.notif-bell {
+  position: relative;
+}
+.notif-bell-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e9d5ff;
+  background: #fff;
+  color: #6d28d9;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.notif-bell-btn:hover {
+  background: #f5f3ff;
+}
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.notif-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 22rem;
+  max-width: 90vw;
+  background: #fff;
+  border: 1px solid #ede9fe;
+  border-radius: 1rem;
+  box-shadow: 0 20px 40px -12px rgba(76, 29, 149, 0.25);
+  z-index: 60;
+  overflow: hidden;
+}
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3e8ff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #4c1d95;
+}
+.notif-markall {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: #7c3aed;
+  font-weight: 700;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.notif-list {
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.notif-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.82rem;
+}
+.notif-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-bottom: 1px solid #f9fafb;
+  background: #fff;
+  cursor: pointer;
+}
+.notif-item:hover {
+  background: #faf5ff;
+}
+.notif-item.unread {
+  background: #f5f3ff;
+}
+.notif-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.notif-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+.notif-dot {
+  color: #7c3aed;
+  flex-shrink: 0;
+}
+.notif-msg {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0.2rem 0 0;
+  line-height: 1.35;
+}
+.notif-time {
+  font-size: 0.68rem;
+  color: #9ca3af;
 }

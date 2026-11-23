@@ -21,6 +21,7 @@ import ImageModal from '../../components/common/ImageModal';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssueById } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported', desc: 'Ticket submitted' },
@@ -56,6 +57,11 @@ export default function IssueDetailsPage() {
   useEffect(() => {
     fetchIssue();
   }, [id]);
+
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssue
+  );
 
   const handleCopyTicket = async () => {
     if (!issue?.ticketId) return;
@@ -113,7 +119,9 @@ export default function IssueDetailsPage() {
         <div className="purple-card rounded-3xl border border-rose-200 p-8 text-center max-w-lg mx-auto">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-purple-950 mb-1">Issue Not Found</h2>
-          <p className="text-sm text-purple-900/70 mb-4">{error || 'This ticket could not be found.'}</p>
+          <p className="text-sm text-purple-900/70 mb-4">
+            {error || 'This ticket could not be found.'}
+          </p>
           <button
             onClick={() => navigate('/student/my-issues')}
             className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold rounded-xl transition-colors"
@@ -164,29 +172,28 @@ export default function IssueDetailsPage() {
                   const isCurrent = state === 'current';
 
                   return (
-                    <div key={step.key} className="flex flex-col items-center text-center relative z-10">
+                    <div
+                      key={step.key}
+                      className="flex flex-col items-center text-center relative z-10"
+                    >
                       <div
                         className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm mb-2 transition-all ${
                           isDone
                             ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                             : isCurrent
-                            ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
-                            : 'bg-purple-100/70 text-purple-400 border border-purple-200'
+                              ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
+                              : 'bg-purple-100/70 text-purple-400 border border-purple-200'
                         }`}
                       >
-                        {isDone ? (
-                          <CheckCircle2 className="w-5 h-5" />
-                        ) : (
-                          <span>{idx + 1}</span>
-                        )}
+                        {isDone ? <CheckCircle2 className="w-5 h-5" /> : <span>{idx + 1}</span>}
                       </div>
                       <p
                         className={`text-xs font-black ${
                           isCurrent
                             ? 'text-purple-900'
                             : isDone
-                            ? 'text-purple-950'
-                            : 'text-purple-400'
+                              ? 'text-purple-950'
+                              : 'text-purple-400'
                         }`}
                       >
                         {step.label}
@@ -202,7 +209,8 @@ export default function IssueDetailsPage() {
                   <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
                   <div>
                     <strong className="block">Ticket Rejected:</strong>
-                    This issue was marked as rejected by facility administration. Check the activity notes below for reasoning.
+                    This issue was marked as rejected by facility administration. Check the activity
+                    notes below for reasoning.
                   </div>
                 </div>
               )}
@@ -328,7 +336,9 @@ export default function IssueDetailsPage() {
                   </div>
 
                   <div className="pt-2 border-t border-purple-100">
-                    <span className="text-purple-700/80 block mb-1 font-bold">Assigned Specialist</span>
+                    <span className="text-purple-700/80 block mb-1 font-bold">
+                      Assigned Specialist
+                    </span>
                     <div className="flex items-center gap-2 font-black text-purple-950">
                       <UserRound className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                       <span>{issue.assignedTo?.fullName || 'Awaiting Assignment'}</span>
@@ -341,7 +351,9 @@ export default function IssueDetailsPage() {
                   </div>
 
                   <div className="pt-2 border-t border-purple-100">
-                    <span className="text-purple-700/80 block mb-1 font-bold">Reported Date & Time</span>
+                    <span className="text-purple-700/80 block mb-1 font-bold">
+                      Reported Date & Time
+                    </span>
                     <div className="flex items-center gap-2 font-black text-purple-950">
                       <Calendar className="w-4 h-4 text-purple-600 flex-shrink-0" />
                       <span>

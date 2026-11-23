@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Search,
-  RefreshCw,
-  LayoutGrid,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from 'lucide-react';
+import { Search, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import AppLayout from '../../components/layouts/AppLayout';
 import IssueCard from '../../components/issues/IssueCard';
@@ -18,8 +10,14 @@ import PriorityBadge from '../../components/common/PriorityBadge';
 import CategoryBadge from '../../components/common/CategoryBadge';
 import ImageModal from '../../components/common/ImageModal';
 import EmptyState from '../../components/common/EmptyState';
-import { getIssues, getIssueCount, getStaffMembers, assignIssue } from '../../services/issueService';
+import {
+  getIssues,
+  getIssueCount,
+  getStaffMembers,
+  assignIssue,
+} from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const PAGE_SIZE = 10;
 
@@ -85,9 +83,7 @@ export default function AdminIssuesPage() {
     try {
       const counts = await Promise.all(
         STATUS_TABS.map((t) =>
-          t.value === 'all'
-            ? getIssueCount()
-            : getIssueCount({ status: t.value })
+          t.value === 'all' ? getIssueCount() : getIssueCount({ status: t.value })
         )
       );
       const map = {};
@@ -139,6 +135,21 @@ export default function AdminIssuesPage() {
   useEffect(() => {
     fetchIssues(page);
   }, [fetchIssues, page]);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    () => {
+      fetchIssues(page);
+      fetchCounts();
+    },
+    [fetchIssues]
+  );
 
   const handleQuickAssign = async (issueId, staffId) => {
     if (!staffId) return;

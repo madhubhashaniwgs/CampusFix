@@ -27,6 +27,7 @@ import QuickStatusModal from '../../components/issues/QuickStatusModal';
 import EmptyState from '../../components/common/EmptyState';
 import IssuePhoto from '../../components/common/IssuePhoto';
 import { getIssues, getIssueCount } from '../../services/issueService';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
@@ -71,7 +72,23 @@ export default function StaffDashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
+
+    // Auto-refresh dashboard data every 30 seconds.
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    fetchDashboard
+  );
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -144,7 +161,8 @@ export default function StaffDashboardPage() {
               <strong className="text-white font-black underline decoration-purple-400">
                 {counts.assigned + counts.in_progress} pending tasks
               </strong>{' '}
-              requiring attention. Update statuses, add maintenance notes, and resolve campus issues.
+              requiring attention. Update statuses, add maintenance notes, and resolve campus
+              issues.
             </p>
           </div>
 
@@ -187,7 +205,9 @@ export default function StaffDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-purple-100">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-purple-950 tracking-tight">Assigned Work Orders</h2>
+              <h2 className="text-xl font-black text-purple-950 tracking-tight">
+                Assigned Work Orders
+              </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                 {issues.length} Active
               </span>
@@ -237,7 +257,9 @@ export default function StaffDashboardPage() {
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-purple-900/70 font-semibold">Loading assigned work orders...</p>
+            <p className="text-sm text-purple-900/70 font-semibold">
+              Loading assigned work orders...
+            </p>
           </div>
         ) : issues.length === 0 ? (
           <EmptyState
@@ -318,19 +340,21 @@ export default function StaffDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2.5 border-t border-purple-100 flex items-center justify-between gap-2">
+                  <div className="pt-2.5 border-t border-purple-100 flex flex-wrap items-center justify-between gap-2">
                     <StatusBadge status={issue.status} size="sm" />
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStatusModalIssue(issue);
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded-lg transition-colors shadow-xs"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                      Update
-                    </button>
+                    {issue.status !== 'resolved' && issue.status !== 'rejected' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStatusModalIssue(issue);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg transition-all shadow-md shadow-purple-600/25 hover:scale-[1.03] whitespace-nowrap"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        Update Status
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -388,16 +412,18 @@ export default function StaffDashboardPage() {
                       <StatusBadge status={issue.status} size="sm" />
                     </td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setStatusModalIssue(issue);
-                        }}
-                        className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded-lg transition-colors shadow-xs"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        Update
-                      </button>
+                      {issue.status !== 'resolved' && issue.status !== 'rejected' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusModalIssue(issue);
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg transition-all shadow-md shadow-purple-600/25 hover:scale-[1.03] whitespace-nowrap"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Update Status
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

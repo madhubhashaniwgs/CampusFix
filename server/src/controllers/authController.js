@@ -15,9 +15,11 @@ class AuthController {
     try {
       const result = await authService.register(req.body);
 
-      // The JWT is delivered only via an httpOnly cookie and is
-      // intentionally absent from the response body.
-      setAuthCookie(res, result.token);
+      // Only active accounts receive a session cookie. Pending
+      // staff registrations must wait for admin approval.
+      if (result.user.status === 'active') {
+        setAuthCookie(res, result.token);
+      }
 
       res.status(201).json(
         new ApiResponse(201, 'Registration successful', {
@@ -31,10 +33,7 @@ class AuthController {
 
   login = async (req, res, next) => {
     try {
-      const result = await authService.login(
-        req.body.email,
-        req.body.password
-      );
+      const result = await authService.login(req.body.email, req.body.password);
 
       setAuthCookie(res, result.token);
 
@@ -52,9 +51,7 @@ class AuthController {
     try {
       const user = await authService.getCurrentUser(req.user.id);
 
-      res.status(200).json(
-        new ApiResponse(200, 'User retrieved successfully', user)
-      );
+      res.status(200).json(new ApiResponse(200, 'User retrieved successfully', user));
     } catch (error) {
       next(error);
     }
@@ -103,9 +100,7 @@ class AuthController {
 
       clearAuthCookie(res);
 
-      res.status(200).json(
-        new ApiResponse(200, 'Logout successful')
-      );
+      res.status(200).json(new ApiResponse(200, 'Logout successful'));
     } catch (error) {
       next(error);
     }

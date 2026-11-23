@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../notifications/NotificationBell';
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  ScrollText,
 } from 'lucide-react';
 
 export default function AppLayout({ children, activeNav }) {
@@ -62,6 +64,8 @@ export default function AppLayout({ children, activeNav }) {
       { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/admin/issues', label: 'All Issues', icon: ClipboardList },
       { to: '/admin/staff', label: 'Staff Team', icon: Users },
+      { to: '/admin/users', label: 'User Management', icon: UserRound },
+      { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
     ],
   };
 
@@ -148,6 +152,9 @@ export default function AppLayout({ children, activeNav }) {
                 </button>
               )}
 
+              {/* Notifications */}
+              <NotificationBell />
+
               {/* Role Badge */}
               <span
                 className={`hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${roleInfo.color}`}
@@ -175,9 +182,7 @@ export default function AppLayout({ children, activeNav }) {
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white/95 rounded-2xl shadow-xl border border-purple-200 py-2 z-50 animate-in fade-in zoom-in-95 backdrop-blur-xl">
                     <div className="px-4 py-2.5 border-b border-purple-100">
-                      <p className="text-xs font-bold text-purple-950 truncate">
-                        {user?.fullName}
-                      </p>
+                      <p className="text-xs font-bold text-purple-950 truncate">{user?.fullName}</p>
                       <p className="text-[11px] text-purple-700/70 truncate">{user?.email}</p>
                       <div className="mt-1.5">
                         <span
@@ -231,7 +236,9 @@ export default function AppLayout({ children, activeNav }) {
           <div className="md:hidden border-t border-purple-200 bg-white/95 backdrop-blur-xl px-4 pt-3 pb-5 space-y-2 animate-in slide-in-from-top-2">
             <div className="flex items-center justify-between pb-3 mb-2 border-b border-purple-100">
               <span className="text-xs font-semibold text-purple-700/70">Signed in as</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase border ${roleInfo.color}`}>
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-bold uppercase border ${roleInfo.color}`}
+              >
                 {role}
               </span>
             </div>

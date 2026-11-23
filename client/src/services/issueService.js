@@ -1,9 +1,20 @@
-
 import apiClient from './apiClient';
 
 // Create a new issue
 export const createIssue = async (issueData) => {
   const response = await apiClient.post('/issues', issueData);
+  return response.data;
+};
+
+// Upload an issue photo to Cloudinary via the backend.
+// Returns { url, publicId, photoToken }.
+export const uploadIssuePhoto = async (file) => {
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  // Do NOT set Content-Type manually — Axios must generate the
+  // multipart boundary itself.
+  const response = await apiClient.post('/issues/upload', formData);
   return response.data;
 };
 
@@ -19,9 +30,7 @@ export const getIssues = async (params = {}) => {
   });
 
   const queryString = query.toString();
-  const response = await apiClient.get(
-    `/issues${queryString ? `?${queryString}` : ''}`
-  );
+  const response = await apiClient.get(`/issues${queryString ? `?${queryString}` : ''}`);
   return response.data;
 };
 
@@ -39,27 +48,25 @@ export const getIssueById = async (issueId) => {
 };
 
 // Get available staff members (Admin only)
-export const getStaffMembers = async () => {
-  const response = await apiClient.get('/issues/staff');
+export const getStaffMembers = async ({ page, limit } = {}) => {
+  const params = {};
+  if (page) params.page = page;
+  if (limit) params.limit = limit;
+
+  const response = await apiClient.get('/issues/staff', { params });
   return response.data;
 };
 
 // Assign issue to a staff member (Admin only)
 export const assignIssue = async (issueId, staffId) => {
-  const response = await apiClient.patch(
-    `/issues/${issueId}/assign`,
-    { staffId }
-  );
+  const response = await apiClient.patch(`/issues/${issueId}/assign`, { staffId });
 
   return response.data;
 };
 
 // Update issue status (Staff / Admin)
 export const updateIssueStatus = async (issueId, status, note = '') => {
-  const response = await apiClient.patch(
-    `/issues/${issueId}/status`,
-    { status, note }
-  );
+  const response = await apiClient.patch(`/issues/${issueId}/status`, { status, note });
 
   return response.data;
 };

@@ -28,9 +28,7 @@ const seedAdmin = async () => {
       if (existingUser.role === 'admin') {
         console.log(`Admin account already exists: ${email}`);
       } else {
-        console.error(
-          `Seed failed: ${email} is already registered as a ${existingUser.role}.`
-        );
+        console.error(`Seed failed: ${email} is already registered as a ${existingUser.role}.`);
         process.exitCode = 1;
       }
       return;

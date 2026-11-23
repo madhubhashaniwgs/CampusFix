@@ -28,6 +28,7 @@ import {
   assignIssue,
 } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const STATUS_STEPS = [
   { key: 'reported', label: 'Reported' },
@@ -66,7 +67,7 @@ export default function AdminIssueDetailsPage() {
       setIssue(issueData);
       setSelectedStatus(issueData?.status || 'in_progress');
       setSelectedStaffId(issueData?.assignedTo?._id || '');
-      setStaffMembers(staffRes.data || []);
+      setStaffMembers(staffRes.data?.staff || staffRes.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to load issue details.');
     } finally {
@@ -78,16 +79,18 @@ export default function AdminIssueDetailsPage() {
     fetchIssueAndStaff();
   }, [id]);
 
+  useRealtimeRefresh(
+    ['issue:created', 'issue:assigned', 'issue:status_changed', 'issue:updated'],
+    fetchIssueAndStaff
+  );
+
   const handleAssignStaff = async () => {
     if (!selectedStaffId) return;
     try {
       setAssigning(true);
       await assignIssue(id, selectedStaffId);
-      const staffObj = staffMembers.find((s) => s._id === selectedStaffId);
-      success(
-        `Assigned to ${staffObj?.fullName || 'Technician'} successfully!`,
-        'Staff Assigned'
-      );
+      const staffObj = staffMembers.find((s) => (s.id || s._id) === selectedStaffId);
+      success(`Assigned to ${staffObj?.fullName || 'Technician'} successfully!`, 'Staff Assigned');
       await fetchIssueAndStaff();
     } catch (err) {
       toastError(err.response?.data?.message || 'Failed to assign staff.');
@@ -166,7 +169,9 @@ export default function AdminIssueDetailsPage() {
         <div className="purple-card rounded-3xl border border-rose-200 p-8 text-center max-w-lg mx-auto">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-purple-950 mb-1">Issue Not Found</h2>
-          <p className="text-sm text-purple-900/70 mb-4">{error || 'This issue could not be found.'}</p>
+          <p className="text-sm text-purple-900/70 mb-4">
+            {error || 'This issue could not be found.'}
+          </p>
           <button
             onClick={() => navigate('/admin/issues')}
             className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold rounded-xl transition-colors"
@@ -223,13 +228,15 @@ export default function AdminIssueDetailsPage() {
                           isDone
                             ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                             : isCurrent
-                            ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
-                            : 'bg-purple-100/70 text-purple-400 border border-purple-200'
+                              ? 'bg-purple-700 text-white ring-4 ring-purple-200 shadow-md shadow-purple-600/25 animate-pulse'
+                              : 'bg-purple-100/70 text-purple-400 border border-purple-200'
                         }`}
                       >
                         {isDone ? <CheckCircle2 className="w-4 h-4" /> : <span>{idx + 1}</span>}
                       </div>
-                      <p className={`text-xs font-black ${isCurrent ? 'text-purple-900' : isDone ? 'text-purple-950' : 'text-purple-400'}`}>
+                      <p
+                        className={`text-xs font-black ${isCurrent ? 'text-purple-900' : isDone ? 'text-purple-950' : 'text-purple-400'}`}
+                      >
                         {step.label}
                       </p>
                     </div>
@@ -254,9 +261,7 @@ export default function AdminIssueDetailsPage() {
               <div className="purple-card rounded-3xl p-6 sm:p-7">
                 <div className="flex items-center gap-2 pb-4 mb-4 border-b border-purple-100">
                   <UserCheck className="w-5 h-5 text-purple-700" />
-                  <h3 className="text-base font-black text-purple-950">
-                    Technician Allocation
-                  </h3>
+                  <h3 className="text-base font-black text-purple-950">Technician Allocation</h3>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -267,7 +272,7 @@ export default function AdminIssueDetailsPage() {
                   >
                     <option value="">-- Choose Staff Technician --</option>
                     {staffMembers.map((staff) => (
-                      <option key={staff._id} value={staff._id}>
+                      <option key={staff.id || staff._id} value={staff.id || staff._id}>
                         {staff.fullName} ({staff.email})
                       </option>
                     ))}
@@ -275,7 +280,9 @@ export default function AdminIssueDetailsPage() {
 
                   <button
                     onClick={handleAssignStaff}
-                    disabled={assigning || !selectedStaffId || selectedStaffId === issue.assignedTo?._id}
+                    disabled={
+                      assigning || !selectedStaffId || selectedStaffId === issue.assignedTo?._id
+                    }
                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/25 disabled:opacity-40 transition-all hover:scale-[1.01]"
                   >
                     {assigning ? 'Allocating...' : 'Assign Staff'}
@@ -288,9 +295,7 @@ export default function AdminIssueDetailsPage() {
                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-purple-100">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-purple-700" />
-                    <h3 className="text-base font-black text-purple-950">
-                      Override Issue Status
-                    </h3>
+                    <h3 className="text-base font-black text-purple-950">Override Issue Status</h3>
                   </div>
                 </div>
 
@@ -380,7 +385,8 @@ export default function AdminIssueDetailsPage() {
                         </span>
                       </div>
                       <p className="text-xs text-purple-800/80 font-medium mt-0.5">
-                        Submitted by {issue.reportedBy?.fullName || 'Student'} ({issue.reportedBy?.email})
+                        Submitted by {issue.reportedBy?.fullName || 'Student'} (
+                        {issue.reportedBy?.email})
                       </p>
                     </div>
                   </div>
@@ -453,7 +459,9 @@ export default function AdminIssueDetailsPage() {
                   </div>
 
                   <div className="pt-2 border-t border-purple-100">
-                    <span className="text-purple-700/80 block mb-1 font-bold">Currently Assigned To</span>
+                    <span className="text-purple-700/80 block mb-1 font-bold">
+                      Currently Assigned To
+                    </span>
                     <div className="flex items-center gap-2 font-black text-purple-950">
                       <UserRound className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                       <span>{issue.assignedTo?.fullName || 'Unassigned'}</span>

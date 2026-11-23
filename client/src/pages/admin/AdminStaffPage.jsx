@@ -17,8 +17,10 @@ import {
 import AppLayout from '../../components/layouts/AppLayout';
 import EmptyState from '../../components/common/EmptyState';
 import { getStaffMembers } from '../../services/issueService';
-import { createStaffMember } from '../../services/userService';
+import { createStaffMember, getUsers, approveStaff, rejectStaff } from '../../services/userService';
 import { useToast } from '../../context/ToastContext';
+import { Check, X as XIcon, Clock } from 'lucide-react';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const emptyForm = {
   fullName: '',
@@ -31,7 +33,16 @@ export default function AdminStaffPage() {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
 
+  const PAGE_SIZE = 10;
+
   const [staffMembers, setStaffMembers] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 0,
+  });
+  const [pendingStaff, setPendingStaff] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -39,11 +50,23 @@ export default function AdminStaffPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchStaff = async () => {
+  const fetchStaff = async (targetPage = 1) => {
     try {
       setLoading(true);
-      const res = await getStaffMembers();
-      setStaffMembers(res.data || []);
+      const [staffRes, pendingRes] = await Promise.all([
+        getStaffMembers({ page: targetPage, limit: PAGE_SIZE }),
+        getUsers({ role: 'staff', status: 'pending', limit: 100 }),
+      ]);
+      setStaffMembers(staffRes.data?.staff || []);
+      setPagination(
+        staffRes.data?.pagination || {
+          page: targetPage,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 0,
+        }
+      );
+      setPendingStaff(pendingRes.data?.users || []);
     } catch (err) {
       toastError(err.response?.data?.message || 'Unable to load staff directory.');
     } finally {
@@ -51,9 +74,18 @@ export default function AdminStaffPage() {
     }
   };
 
+  const goToPage = (p) => {
+    if (p >= 1 && p <= pagination.totalPages) fetchStaff(p);
+  };
+
   useEffect(() => {
-    fetchStaff();
+    fetchStaff(1);
   }, []);
+
+  useRealtimeRefresh(
+    ['staff:created', 'staff:approved', 'staff:rejected', 'dashboard:stats_updated'],
+    () => fetchStaff(pagination.page)
+  );
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -83,14 +115,34 @@ export default function AdminStaffPage() {
       success(`Staff account for ${formData.fullName} created successfully!`, 'Account Created');
       setFormData(emptyForm);
       setModalOpen(false);
-      await fetchStaff();
+      await fetchStaff(pagination.page);
     } catch (err) {
       toastError(
         err.response?.data?.message ||
-        'Unable to create staff account. Please check inputs and try again.'
+          'Unable to create staff account. Please check inputs and try again.'
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApprove = async (member) => {
+    try {
+      await approveStaff(member.id);
+      success(`${member.fullName} approved and can now sign in.`, 'Staff Approved');
+      await fetchStaff(pagination.page);
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to approve staff member.');
+    }
+  };
+
+  const handleReject = async (member) => {
+    try {
+      await rejectStaff(member.id);
+      success(`${member.fullName}'s registration was rejected.`, 'Registration Rejected');
+      await fetchStaff(pagination.page);
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Unable to reject staff member.');
     }
   };
 
@@ -105,7 +157,7 @@ export default function AdminStaffPage() {
       {/* Modal: Create Staff Account */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-md animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in"
           onClick={() => setModalOpen(false)}
         >
           <div
@@ -235,7 +287,8 @@ export default function AdminStaffPage() {
             Staff & Technician Team
           </h1>
           <p className="text-sm text-purple-900/70 mt-1 font-medium">
-            Manage authorized staff accounts, review personnel directory, and provision new technician credentials.
+            Manage authorized staff accounts, review personnel directory, and provision new
+            technician credentials.
           </p>
         </div>
 
@@ -287,6 +340,55 @@ export default function AdminStaffPage() {
         </div>
       </div>
 
+      {/* Pending Staff Approvals */}
+      {pendingStaff.length > 0 && (
+        <div className="purple-card rounded-3xl p-5 sm:p-6 mb-6 border-2 border-amber-300/60 bg-amber-50/40">
+          <div className="flex items-center gap-2.5 mb-4">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-black text-purple-950">Pending Staff Approvals</h2>
+            <span className="ml-auto text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full">
+              {pendingStaff.length} waiting
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {pendingStaff.map((member) => (
+              <div
+                key={member.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/90 border border-amber-200 rounded-2xl p-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-extrabold text-purple-950 truncate">{member.fullName}</p>
+                  <p className="text-xs text-purple-800/70 font-medium truncate">{member.email}</p>
+                  <p className="text-[11px] text-purple-700/60 font-semibold mt-0.5">
+                    {member.staffId && `Staff ID: ${member.staffId}`}
+                    {member.staffId && member.department && ' · '}
+                    {member.department && `Dept: ${member.department}`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleApprove(member)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(member)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl transition-colors"
+                  >
+                    <XIcon className="w-4 h-4" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Staff Grid Cards */}
       {loading ? (
         <div className="py-20 text-center">
@@ -318,7 +420,7 @@ export default function AdminStaffPage() {
 
             return (
               <div
-                key={staff._id}
+                key={staff.id || staff._id}
                 className="purple-card rounded-3xl p-6 flex flex-col justify-between"
               >
                 <div>
@@ -353,7 +455,8 @@ export default function AdminStaffPage() {
 
                 <div className="mt-5 pt-3 border-t border-purple-100 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-purple-700 font-semibold">
-                    Added {new Date(staff.createdAt || Date.now()).toLocaleDateString('en-GB', {
+                    Added{' '}
+                    {new Date(staff.createdAt || Date.now()).toLocaleDateString('en-GB', {
                       month: 'short',
                       year: 'numeric',
                     })}
@@ -366,6 +469,40 @@ export default function AdminStaffPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs font-semibold text-purple-900/70">
+            Showing{' '}
+            <strong className="text-purple-950">{(pagination.page - 1) * PAGE_SIZE + 1}</strong> to{' '}
+            <strong className="text-purple-950">
+              {Math.min(pagination.page * PAGE_SIZE, pagination.totalItems)}
+            </strong>{' '}
+            of <strong className="text-purple-950">{pagination.totalItems}</strong> staff members
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-black text-purple-950">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs font-bold text-purple-800 disabled:opacity-40 hover:bg-purple-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </AppLayout>

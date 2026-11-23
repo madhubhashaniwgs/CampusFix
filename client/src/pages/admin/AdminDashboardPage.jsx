@@ -25,8 +25,16 @@ import CategoryBadge from '../../components/common/CategoryBadge';
 import ImageModal from '../../components/common/ImageModal';
 import EmptyState from '../../components/common/EmptyState';
 import IssuePhoto from '../../components/common/IssuePhoto';
-import { getIssues, getIssueCount, getStaffMembers, assignIssue } from '../../services/issueService';
+import IssueCard from '../../components/issues/IssueCard';
+import {
+  getIssues,
+  getIssueCount,
+  getStaffMembers,
+  assignIssue,
+} from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
+import AnalyticsCharts from '../../components/admin/AnalyticsCharts';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -51,28 +59,23 @@ export default function AdminDashboardPage() {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const [
-        issuesRes,
-        staffRes,
-        total,
-        reported,
-        assigned,
-        inProgress,
-        resolved,
-        unassigned,
-      ] = await Promise.all([
-        getIssues({ limit: 6 }),
-        getStaffMembers().catch(() => ({ data: [] })),
-        getIssueCount(),
-        getIssueCount({ status: 'reported' }),
-        getIssueCount({ status: 'assigned' }),
-        getIssueCount({ status: 'in_progress' }),
-        getIssueCount({ status: 'resolved' }),
-        getIssueCount({ assignee: 'unassigned', status: 'reported,assigned,in_progress' }),
-      ]);
+      const [issuesRes, staffRes, total, reported, assigned, inProgress, resolved, unassigned] =
+        await Promise.all([
+          getIssues({
+            status: 'reported,assigned,in_progress',
+            limit: 6,
+          }),
+          getStaffMembers().catch(() => ({ data: [] })),
+          getIssueCount(),
+          getIssueCount({ status: 'reported' }),
+          getIssueCount({ status: 'assigned' }),
+          getIssueCount({ status: 'in_progress' }),
+          getIssueCount({ status: 'resolved' }),
+          getIssueCount({ assignee: 'unassigned', status: 'reported,assigned,in_progress' }),
+        ]);
 
       setIssues(issuesRes.data || []);
-      setStaffMembers(staffRes.data || []);
+      setStaffMembers(staffRes.data?.staff || staffRes.data || []);
       setCounts({
         total,
         reported,
@@ -90,7 +93,25 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
+
+    // Auto-refresh dashboard data every 30 seconds.
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+      'staff:approved',
+      'staff:rejected',
+    ],
+    fetchDashboard
+  );
 
   const handleQuickAssign = async (issueId, staffId) => {
     if (!staffId) return;
@@ -148,6 +169,8 @@ export default function AdminDashboardPage() {
 
   return (
     <AppLayout activeNav="dashboard">
+      <AnalyticsCharts />
+
       <ImageModal
         isOpen={activePhoto.isOpen}
         src={activePhoto.src}
@@ -168,7 +191,8 @@ export default function AdminDashboardPage() {
               Administrator Control Center
             </h1>
             <p className="text-purple-100 text-sm sm:text-base leading-relaxed max-w-xl font-medium">
-              Monitor facilities across campus, assign technical staff to incoming tickets, and maintain high campus infrastructure standards.
+              Monitor facilities across campus, assign technical staff to incoming tickets, and
+              maintain high campus infrastructure standards.
             </p>
           </div>
 
@@ -197,7 +221,9 @@ export default function AdminDashboardPage() {
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <span>Campus Resolution Rate:</span>
               <strong className="text-white text-sm font-black">{resolutionRate}%</strong>
-              <span className="text-purple-200 font-semibold">({counts.resolved} of {counts.total} completed)</span>
+              <span className="text-purple-200 font-semibold">
+                ({counts.resolved} of {counts.total} completed)
+              </span>
             </div>
             <div className="w-full sm:w-64 bg-white/25 rounded-full h-2.5 overflow-hidden">
               <div
@@ -229,7 +255,9 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-purple-100">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-purple-950 tracking-tight">Recent Campus Issues</h2>
+              <h2 className="text-xl font-black text-purple-950 tracking-tight">
+                Recent Campus Issues
+              </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                 Live Feed
               </span>
@@ -292,97 +320,12 @@ export default function AdminDashboardPage() {
           /* Cards Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
             {issues.map((issue) => (
-              <div
+              <IssueCard
                 key={issue._id}
+                issue={issue}
                 onClick={() => navigate(`/admin/issues/${issue._id}`)}
-                className="group relative purple-card rounded-2xl overflow-hidden flex flex-col cursor-pointer"
-              >
-                {/* Image Banner with SVG Placeholder fallback */}
-                <div className="relative h-40 w-full overflow-hidden border-b border-purple-200">
-                  <IssuePhoto
-                    src={issue.photo}
-                    alt={issue.title}
-                    category={issue.category}
-                    variant="banner"
-                    className="h-40"
-                  />
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-purple-950 font-mono text-xs font-black px-2.5 py-1 rounded-lg border border-purple-200 shadow-xs">
-                    {issue.ticketId}
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <PriorityBadge priority={issue.priority} size="sm" />
-                  </div>
-                  {issue.photo && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActivePhoto({
-                          isOpen: true,
-                          src: issue.photo,
-                          title: `${issue.ticketId} - ${issue.title}`,
-                        });
-                      }}
-                      className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 backdrop-blur-md text-white transition-all opacity-0 group-hover:opacity-100 border border-white/20"
-                      title="Inspect Photo"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-purple-950 group-hover:text-purple-700 transition-colors line-clamp-1 text-sm sm:text-base">
-                      {issue.title}
-                    </h3>
-                    <p className="text-xs text-purple-900/70 line-clamp-2 mt-1 font-medium">
-                      {issue.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-purple-100 text-xs text-purple-900/70">
-                    <div className="flex items-center gap-1.5 text-purple-950 font-semibold truncate">
-                      <MapPin className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
-                      <span className="truncate">{issue.location}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <CategoryBadge category={issue.category} size="sm" />
-                      <div className="flex items-center gap-1 text-[11px] text-purple-700 font-semibold">
-                        <Calendar className="w-3 h-3" />
-                        <span>
-                          {new Date(issue.createdAt).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assignee / Quick dispatch bar */}
-                  <div
-                    className="pt-2.5 border-t border-purple-100 flex items-center justify-between gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <StatusBadge status={issue.status} size="sm" />
-
-                    <select
-                      value={issue.assignedTo?._id || ''}
-                      onChange={(e) => handleQuickAssign(issue._id, e.target.value)}
-                      disabled={assigningId === issue._id}
-                      className="text-xs py-1 px-2 rounded-lg border border-purple-200 bg-white font-bold text-purple-900 outline-none focus:border-purple-600 max-w-[140px] truncate"
-                    >
-                      <option value="">+ Assign Staff</option>
-                      {staffMembers.map((staff) => (
-                        <option key={staff._id} value={staff._id}>
-                          {staff.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
+                onPhotoClick={(src, title) => setActivePhoto({ isOpen: true, src, title })}
+              />
             ))}
           </div>
         ) : (

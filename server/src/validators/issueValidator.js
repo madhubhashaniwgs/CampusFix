@@ -1,41 +1,18 @@
 import ApiError from '../utils/ApiError.js';
 
-export const validCategories = [
-  'electrical',
-  'plumbing',
-  'it',
-  'furniture',
-  'other',
-];
+export const validCategories = ['electrical', 'plumbing', 'it', 'furniture', 'other'];
 
-export const validPriorities = [
-  'low',
-  'medium',
-  'high',
-  'urgent',
-];
+export const validPriorities = ['low', 'medium', 'high', 'urgent'];
 
-const validStatuses = [
-  'assigned',
-  'in_progress',
-  'resolved',
-  'rejected',
-];
+const validStatuses = ['assigned', 'in_progress', 'resolved', 'rejected'];
 
-export const filterableStatuses = [
-  'reported',
-  'assigned',
-  'in_progress',
-  'resolved',
-  'rejected',
-];
+export const filterableStatuses = ['reported', 'assigned', 'in_progress', 'resolved', 'rejected'];
 
 const MAX_SEARCH_LENGTH = 100;
 const MAX_LIMIT = 100;
 
 export const validateCreateIssue = (req, res, next) => {
-  const { title, description, category, location, priority, photo } =
-    req.body;
+  const { title, description, category, location, priority, photo } = req.body;
 
   const errors = [];
 
@@ -67,16 +44,26 @@ export const validateCreateIssue = (req, res, next) => {
     errors.push('Please select a valid priority');
   }
 
-  // Optional photo: must be a JPEG/PNG/WebP data URL within a
-  // bounded size to keep documents small.
+  // Optional photo: either a legacy JPEG/PNG/WebP data URL within
+  // a bounded size, or an HTTPS URL hosted on res.cloudinary.com.
   const MAX_PHOTO_LENGTH = 1_500_000;
   if (photo !== undefined && photo !== null && photo !== '') {
-    if (
-      typeof photo !== 'string' ||
-      !photo.startsWith('data:image/') ||
-      photo.length > MAX_PHOTO_LENGTH
-    ) {
-      errors.push('Photo must be a valid image under 1.5MB');
+    const isLegacyDataUrl =
+      typeof photo === 'string' &&
+      photo.startsWith('data:image/') &&
+      photo.length <= MAX_PHOTO_LENGTH;
+
+    let isCloudinaryUrl = false;
+    if (typeof photo === 'string' && photo.startsWith('https://')) {
+      try {
+        isCloudinaryUrl = new URL(photo).hostname === 'res.cloudinary.com';
+      } catch {
+        isCloudinaryUrl = false;
+      }
+    }
+
+    if (!isLegacyDataUrl && !isCloudinaryUrl) {
+      errors.push('Photo must be a valid image data URL or a Cloudinary image URL');
     }
   }
 
@@ -106,19 +93,8 @@ export const validateUpdateStatus = (req, res, next) => {
   next();
 };
 
-
 export const validateIssueListQuery = (req, res, next) => {
-  const {
-    page,
-    limit,
-    status,
-    priority,
-    category,
-    assignee,
-    dateFrom,
-    dateTo,
-    search,
-  } = req.query;
+  const { page, limit, status, priority, category, assignee, dateFrom, dateTo, search } = req.query;
 
   const errors = [];
   const listQuery = {};
@@ -142,7 +118,9 @@ export const validateIssueListQuery = (req, res, next) => {
   }
 
   if (status !== undefined) {
-    const statuses = String(status).split(',').map((s) => s.trim());
+    const statuses = String(status)
+      .split(',')
+      .map((s) => s.trim());
     const invalid = statuses.filter((s) => !filterableStatuses.includes(s));
     if (statuses.length === 0 || invalid.length > 0) {
       errors.push('Please provide valid issue statuses');
@@ -200,13 +178,8 @@ export const validateIssueListQuery = (req, res, next) => {
   }
 
   if (search !== undefined) {
-    if (
-      typeof search !== 'string' ||
-      search.trim().length > MAX_SEARCH_LENGTH
-    ) {
-      errors.push(
-        `Search must be a string of at most ${MAX_SEARCH_LENGTH} characters`
-      );
+    if (typeof search !== 'string' || search.trim().length > MAX_SEARCH_LENGTH) {
+      errors.push(`Search must be a string of at most ${MAX_SEARCH_LENGTH} characters`);
     } else {
       listQuery.search = search.trim();
     }
@@ -225,15 +198,11 @@ export const validateAssignIssue = (req, res, next) => {
   const { staffId } = req.body;
 
   if (!staffId) {
-    return next(
-      new ApiError(400, 'Staff ID is required')
-    );
+    return next(new ApiError(400, 'Staff ID is required'));
   }
 
   if (!/^[0-9a-fA-F]{24}$/.test(staffId)) {
-    return next(
-      new ApiError(400, 'Invalid staff ID')
-    );
+    return next(new ApiError(400, 'Invalid staff ID'));
   }
 
   next();

@@ -35,15 +35,39 @@ export default function QuickStatusModal({ isOpen, issue, onClose, onUpdated }) 
   };
 
   const statusOptions = [
-    { value: 'assigned', label: 'Assigned', desc: 'Technician dispatched', icon: Clock, color: 'text-sky-800 bg-sky-100 border-sky-300' },
-    { value: 'in_progress', label: 'In Progress', desc: 'Active repair underway', icon: AlertCircle, color: 'text-purple-800 bg-purple-100 border-purple-300' },
-    { value: 'resolved', label: 'Resolved', desc: 'Fix tested and complete', icon: CheckCircle2, color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
-    { value: 'rejected', label: 'Rejected', desc: 'Duplicate or not actionable', icon: XCircle, color: 'text-rose-800 bg-rose-100 border-rose-300' },
+    {
+      value: 'assigned',
+      label: 'Assigned',
+      desc: 'Technician dispatched',
+      icon: Clock,
+      color: 'text-sky-800 bg-sky-100 border-sky-300',
+    },
+    {
+      value: 'in_progress',
+      label: 'In Progress',
+      desc: 'Active repair underway',
+      icon: AlertCircle,
+      color: 'text-purple-800 bg-purple-100 border-purple-300',
+    },
+    {
+      value: 'resolved',
+      label: 'Resolved',
+      desc: 'Fix tested and complete',
+      icon: CheckCircle2,
+      color: 'text-emerald-800 bg-emerald-100 border-emerald-300',
+    },
+    {
+      value: 'rejected',
+      label: 'Rejected',
+      desc: 'Duplicate or not actionable',
+      icon: XCircle,
+      color: 'text-rose-800 bg-rose-100 border-rose-300',
+    },
   ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-md animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in"
       onClick={onClose}
     >
       <div

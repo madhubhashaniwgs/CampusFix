@@ -26,6 +26,7 @@ import ImageModal from '../components/common/ImageModal';
 import EmptyState from '../components/common/EmptyState';
 import IssueCard from '../components/issues/IssueCard';
 import IssuePhoto from '../components/common/IssuePhoto';
+import { useRealtimeRefresh } from '../hooks/useRealtime';
 import { getIssues, getIssueCount } from '../services/issueService';
 
 export default function DashboardPage() {
@@ -43,34 +44,50 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [activePhoto, setActivePhoto] = useState({ isOpen: false, src: '', title: '' });
 
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      const [issuesRes, total, reported, inProgress, resolved] = await Promise.all([
+        getIssues({ limit: 6 }),
+        getIssueCount({}),
+        getIssueCount({ status: 'reported' }),
+        getIssueCount({ status: 'in_progress' }),
+        getIssueCount({ status: 'resolved' }),
+      ]);
+
+      setRecentIssues(issuesRes.data || []);
+      setStats({
+        total,
+        reported,
+        in_progress: inProgress,
+        resolved,
+      });
+    } catch {
+      // Fallback gracefully
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        const [issuesRes, total, reported, inProgress, resolved] = await Promise.all([
-          getIssues({ limit: 6 }),
-          getIssueCount({}),
-          getIssueCount({ status: 'reported' }),
-          getIssueCount({ status: 'in_progress' }),
-          getIssueCount({ status: 'resolved' }),
-        ]);
-
-        setRecentIssues(issuesRes.data || []);
-        setStats({
-          total,
-          reported,
-          in_progress: inProgress,
-          resolved,
-        });
-      } catch {
-        // Fallback gracefully
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboard();
+
+    // Auto-refresh dashboard data every 30 seconds.
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    fetchDashboard
+  );
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -139,7 +156,8 @@ export default function DashboardPage() {
               {greeting}, {user?.fullName || 'Student'}!
             </h1>
             <p className="text-purple-100 text-sm sm:text-base leading-relaxed max-w-xl">
-              Track maintenance tickets across lecture halls, labs, and dorms. Report new issues in seconds and follow live progress.
+              Track maintenance tickets across lecture halls, labs, and dorms. Report new issues in
+              seconds and follow live progress.
             </p>
           </div>
 
@@ -199,7 +217,9 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-purple-100">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-extrabold text-purple-950 tracking-tight">Recent Issues</h2>
+              <h2 className="text-xl font-extrabold text-purple-950 tracking-tight">
+                Recent Issues
+              </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                 {recentIssues.length} Latest
               </span>

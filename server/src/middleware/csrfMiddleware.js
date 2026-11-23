@@ -1,9 +1,5 @@
 import ApiError from '../utils/ApiError.js';
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  verifyCsrfToken,
-} from '../utils/cookieConfig.js';
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, verifyCsrfToken } from '../utils/cookieConfig.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -24,9 +20,7 @@ const csrfProtection = (req, res, next) => {
     cookieToken !== headerToken ||
     !verifyCsrfToken(cookieToken)
   ) {
-    return next(
-      new ApiError(403, 'Invalid or missing CSRF token')
-    );
+    return next(new ApiError(403, 'Invalid or missing CSRF token'));
   }
 
   next();

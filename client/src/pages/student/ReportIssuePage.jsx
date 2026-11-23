@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -20,22 +20,73 @@ import {
 
 import AppLayout from '../../components/layouts/AppLayout';
 import ImageModal from '../../components/common/ImageModal';
-import { createIssue } from '../../services/issueService';
+import { createIssue, uploadIssuePhoto } from '../../services/issueService';
 import { useToast } from '../../context/ToastContext';
 
 const CATEGORIES = [
-  { id: 'electrical', label: 'Electrical', desc: 'Lighting, sockets, power, fans', icon: Zap, color: 'text-amber-900 bg-amber-100/90 border-amber-300' },
-  { id: 'plumbing', label: 'Plumbing', desc: 'Leaks, faucets, drainage, restroom', icon: Droplets, color: 'text-cyan-900 bg-cyan-100/90 border-cyan-300' },
-  { id: 'it', label: 'IT & Equipment', desc: 'Projectors, Wi-Fi, lab PCs, AV', icon: Monitor, color: 'text-indigo-900 bg-indigo-100/90 border-indigo-300' },
-  { id: 'furniture', label: 'Furniture', desc: 'Desks, chairs, whiteboards, doors', icon: Armchair, color: 'text-emerald-900 bg-emerald-100/90 border-emerald-300' },
-  { id: 'other', label: 'General / Facility', desc: 'HVAC, windows, locks, paint', icon: Wrench, color: 'text-purple-900 bg-purple-100/90 border-purple-300' },
+  {
+    id: 'electrical',
+    label: 'Electrical',
+    desc: 'Lighting, sockets, power, fans',
+    icon: Zap,
+    color: 'text-amber-900 bg-amber-100/90 border-amber-300',
+  },
+  {
+    id: 'plumbing',
+    label: 'Plumbing',
+    desc: 'Leaks, faucets, drainage, restroom',
+    icon: Droplets,
+    color: 'text-cyan-900 bg-cyan-100/90 border-cyan-300',
+  },
+  {
+    id: 'it',
+    label: 'IT & Equipment',
+    desc: 'Projectors, Wi-Fi, lab PCs, AV',
+    icon: Monitor,
+    color: 'text-indigo-900 bg-indigo-100/90 border-indigo-300',
+  },
+  {
+    id: 'furniture',
+    label: 'Furniture',
+    desc: 'Desks, chairs, whiteboards, doors',
+    icon: Armchair,
+    color: 'text-emerald-900 bg-emerald-100/90 border-emerald-300',
+  },
+  {
+    id: 'other',
+    label: 'General / Facility',
+    desc: 'HVAC, windows, locks, paint',
+    icon: Wrench,
+    color: 'text-purple-900 bg-purple-100/90 border-purple-300',
+  },
 ];
 
 const PRIORITIES = [
-  { id: 'low', label: 'Low', desc: 'Minor cosmetic or non-blocking issues', color: 'border-purple-200 hover:border-purple-300' },
-  { id: 'medium', label: 'Medium', desc: 'Standard maintenance needed soon', color: 'border-purple-300 hover:border-purple-400' },
-  { id: 'high', label: 'High', desc: 'Impacting classes or room function', color: 'border-orange-300 hover:border-orange-400' },
-  { id: 'urgent', label: 'Urgent', desc: 'Safety hazard or total breakdown', color: 'border-rose-300 hover:border-rose-400', isUrgent: true },
+  {
+    id: 'low',
+    label: 'Low',
+    desc: 'Minor cosmetic or non-blocking issues',
+    color: 'border-purple-200 hover:border-purple-300',
+  },
+  {
+    id: 'medium',
+    label: 'Medium',
+    desc: 'Standard maintenance needed soon',
+    color: 'border-purple-300 hover:border-purple-400',
+  },
+  {
+    id: 'high',
+    label: 'High',
+    desc: 'Impacting classes or room function',
+    color: 'border-orange-300 hover:border-orange-400',
+  },
+  {
+    id: 'urgent',
+    label: 'Urgent',
+    desc: 'Safety hazard or total breakdown',
+    color: 'border-rose-300 hover:border-rose-400',
+    isUrgent: true,
+  },
 ];
 
 const QUICK_LOCATIONS = [
@@ -60,12 +111,32 @@ export default function ReportIssuePage() {
     priority: 'medium',
   });
 
-  const [photo, setPhoto] = useState(null);
+  // photoBlob holds the compressed JPEG Blob for upload;
+  // photoPreview is a local object URL for display only.
+  const [photoBlob, setPhotoBlob] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
   const [photoInfo, setPhotoInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const previewUrlRef = useRef('');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
+
+  const setPreviewUrl = (url) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+    previewUrlRef.current = url;
+    setPhotoPreview(url);
+  };
 
   const handlePhotoChange = (event) => {
     const file = event.target.files?.[0];
@@ -86,16 +157,30 @@ export default function ReportIssuePage() {
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
 
-        setPhoto(dataUrl);
-        setPhotoPreview(dataUrl);
-        setPhotoInfo({
-          name: file.name,
-          dimensions: `${canvas.width} x ${canvas.height} px`,
-          size: `${Math.round((dataUrl.length * 0.75) / 1024)} KB`,
-        });
-        success('Photo attached & optimized successfully!');
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              toastError('Unable to process the selected image.');
+              return;
+            }
+
+            const uploadFile = new File([blob], 'issue-photo.jpg', {
+              type: 'image/jpeg',
+            });
+
+            setPhotoBlob(uploadFile);
+            setPreviewUrl(URL.createObjectURL(uploadFile));
+            setPhotoInfo({
+              name: file.name,
+              dimensions: `${canvas.width} x ${canvas.height} px`,
+              size: `${Math.max(1, Math.round(blob.size / 1024))} KB`,
+            });
+            success('Photo attached & optimized successfully!');
+          },
+          'image/jpeg',
+          0.75
+        );
       };
       img.src = reader.result;
     };
@@ -103,8 +188,8 @@ export default function ReportIssuePage() {
   };
 
   const removePhoto = () => {
-    setPhoto(null);
-    setPhotoPreview('');
+    setPhotoBlob(null);
+    setPreviewUrl('');
     setPhotoInfo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -134,16 +219,28 @@ export default function ReportIssuePage() {
 
     try {
       setLoading(true);
-      const res = await createIssue({ ...formData, photo });
-      success(
-        `Ticket ${res.data?.ticketId || ''} created successfully!`,
-        'Issue Reported'
-      );
+
+      // Upload the photo first (if present); the backend returns a
+      // Cloudinary URL plus a signed token binding it to this user.
+      let photoPayload = {};
+      if (photoBlob) {
+        setUploading(true);
+        const upload = await uploadIssuePhoto(photoBlob);
+        setUploading(false);
+        photoPayload = {
+          photo: upload.data.url,
+          photoToken: upload.data.photoToken,
+        };
+      }
+
+      const res = await createIssue({ ...formData, ...photoPayload });
+      success(`Ticket ${res.data?.ticketId || ''} created successfully!`, 'Issue Reported');
       navigate('/student/my-issues', { replace: true });
     } catch (err) {
+      setUploading(false);
       toastError(
         err.response?.data?.message ||
-        'Unable to submit your issue. Please check all fields and try again.'
+          'Unable to submit your issue. Please check all fields and try again.'
       );
     } finally {
       setLoading(false);
@@ -185,7 +282,10 @@ export default function ReportIssuePage() {
             {/* 1. Title */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="title" className="text-xs font-black uppercase tracking-wider text-purple-950">
+                <label
+                  htmlFor="title"
+                  className="text-xs font-black uppercase tracking-wider text-purple-950"
+                >
                   Issue Title <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[11px] text-purple-700 font-mono font-bold">
@@ -229,13 +329,13 @@ export default function ReportIssuePage() {
                         <div className={`p-2 rounded-xl border ${cat.color}`}>
                           <Icon className="w-4 h-4" />
                         </div>
-                        {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-purple-700" />
-                        )}
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-700" />}
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-purple-950">{cat.label}</p>
-                        <p className="text-[10px] text-purple-800/80 line-clamp-1 mt-0.5">{cat.desc}</p>
+                        <p className="text-[10px] text-purple-800/80 line-clamp-1 mt-0.5">
+                          {cat.desc}
+                        </p>
                       </div>
                     </button>
                   );
@@ -245,7 +345,10 @@ export default function ReportIssuePage() {
 
             {/* 3. Location with Quick Preset Chips */}
             <div>
-              <label htmlFor="location" className="block text-xs font-black uppercase tracking-wider text-purple-950 mb-2">
+              <label
+                htmlFor="location"
+                className="block text-xs font-black uppercase tracking-wider text-purple-950 mb-2"
+              >
                 Location on Campus <span className="text-rose-500">*</span>
               </label>
               <div className="relative mb-2">
@@ -304,17 +407,23 @@ export default function ReportIssuePage() {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-xs font-black uppercase tracking-wider ${
-                          p.isUrgent ? 'text-rose-800 flex items-center gap-1' : 'text-purple-950'
-                        }`}>
+                        <span
+                          className={`text-xs font-black uppercase tracking-wider ${
+                            p.isUrgent ? 'text-rose-800 flex items-center gap-1' : 'text-purple-950'
+                          }`}
+                        >
                           {p.isUrgent && <Flame className="w-3 h-3 text-rose-600" />}
                           {p.label}
                         </span>
                         {isSelected && (
-                          <div className={`w-2 h-2 rounded-full ${p.isUrgent ? 'bg-rose-600' : 'bg-purple-700'}`} />
+                          <div
+                            className={`w-2 h-2 rounded-full ${p.isUrgent ? 'bg-rose-600' : 'bg-purple-700'}`}
+                          />
                         )}
                       </div>
-                      <p className="text-[10px] text-purple-800/80 font-medium leading-tight">{p.desc}</p>
+                      <p className="text-[10px] text-purple-800/80 font-medium leading-tight">
+                        {p.desc}
+                      </p>
                     </button>
                   );
                 })}
@@ -324,7 +433,9 @@ export default function ReportIssuePage() {
                 <div className="mt-2.5 p-3 rounded-xl bg-rose-100/90 border border-rose-300 text-rose-950 text-xs flex items-start gap-2.5 animate-in fade-in">
                   <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <strong>Urgent Priority Selected:</strong> This will be flagged immediately to facility dispatch. Please use only for safety hazards, sparking wires, major water leaks, or active security risks.
+                    <strong>Urgent Priority Selected:</strong> This will be flagged immediately to
+                    facility dispatch. Please use only for safety hazards, sparking wires, major
+                    water leaks, or active security risks.
                   </div>
                 </div>
               )}
@@ -333,7 +444,10 @@ export default function ReportIssuePage() {
             {/* 5. Detailed Description */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="description" className="text-xs font-black uppercase tracking-wider text-purple-950">
+                <label
+                  htmlFor="description"
+                  className="text-xs font-black uppercase tracking-wider text-purple-950"
+                >
                   Detailed Description <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[11px] text-purple-700 font-mono font-bold">
@@ -368,7 +482,11 @@ export default function ReportIssuePage() {
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-purple-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {loading ? (
-                  <>Submitting Ticket...</>
+                  uploading ? (
+                    <>Uploading Photo...</>
+                  ) : (
+                    <>Submitting Ticket...</>
+                  )
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
@@ -389,16 +507,13 @@ export default function ReportIssuePage() {
               Attach Photo Evidence
             </h3>
             <p className="text-xs text-purple-900/70 mb-4 leading-relaxed">
-              Photos help technicians diagnose issues and bring the right replacement parts on the first visit.
+              Photos help technicians diagnose issues and bring the right replacement parts on the
+              first visit.
             </p>
 
             {photoPreview ? (
               <div className="relative rounded-2xl overflow-hidden border border-purple-200 bg-purple-950/20 group">
-                <img
-                  src={photoPreview}
-                  alt="Issue preview"
-                  className="w-full h-52 object-cover"
-                />
+                <img src={photoPreview} alt="Issue preview" className="w-full h-52 object-cover" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <button
                     type="button"

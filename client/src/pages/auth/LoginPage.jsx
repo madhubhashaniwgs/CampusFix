@@ -11,7 +11,6 @@ import {
   TicketCheck,
   Users,
   BarChart3,
-  Sparkles,
 } from 'lucide-react';
 
 const getDashboardPath = (role) => {
@@ -62,11 +61,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillCredentials = (email, password) => {
-    setFormData({ email, password });
-    setError('');
-  };
-
   return (
     <div className="auth-page ambient-purple-bg">
       <div className="auth-layout shadow-2xl border border-purple-300">
@@ -81,7 +75,8 @@ export default function LoginPage() {
           <div>
             <h2>Report. Track. Resolve.</h2>
             <p>
-              CampusFix connects students, staff technicians, and campus administrators so every campus facility issue gets resolved swiftly.
+              CampusFix connects students, staff technicians, and campus administrators so every
+              campus facility issue gets resolved swiftly.
             </p>
 
             <div className="auth-showcase-features">
@@ -109,14 +104,18 @@ export default function LoginPage() {
           <div className="auth-card">
             <div className="auth-heading">
               <h1 className="text-purple-950 font-black">Welcome back!</h1>
-              <p className="text-purple-800 font-medium">Sign in to continue to your CampusFix portal.</p>
+              <p className="text-purple-800 font-medium">
+                Sign in to continue to your CampusFix portal.
+              </p>
             </div>
 
             {error && <div className="error-message">{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="email" className="text-purple-950 font-bold">Email address</label>
+                <label htmlFor="email" className="text-purple-950 font-bold">
+                  Email address
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <Mail size={18} className="text-purple-500" />
                   <input
@@ -133,7 +132,9 @@ export default function LoginPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="password" className="text-purple-950 font-bold">Password</label>
+                <label htmlFor="password" className="text-purple-950 font-bold">
+                  Password
+                </label>
                 <div className="input-wrapper border-purple-200 bg-white">
                   <LockKeyhole size={18} className="text-purple-500" />
                   <input
@@ -166,41 +167,10 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Quick Demo Helper Section */}
-            <div className="mt-6 pt-5 border-t border-purple-200">
-              <span className="text-[11px] font-black uppercase tracking-wider text-purple-900 block mb-2 flex items-center gap-1">
-                <Sparkles size={13} className="text-purple-700" />
-                Quick demo credentials
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('student@campus.edu', 'Student123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('staff@campus.edu', 'Staff123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillCredentials('admin@campus.edu', 'Admin123!')}
-                  className="px-2 py-1.5 rounded-lg bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-[11px] font-black border border-purple-300 transition-colors"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-
             <div className="auth-footer text-purple-900/80">
               <span>Don't have an account? </span>
               <Link to="/register" className="text-purple-700 font-bold hover:underline">
-                Create student account
+                Create an account
               </Link>
             </div>
           </div>

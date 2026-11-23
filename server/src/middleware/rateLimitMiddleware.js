@@ -5,12 +5,15 @@ import ApiError from '../utils/ApiError.js';
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
-const createRateLimiter = (message) =>
+// Factory exported so tests can inject a short window / low max
+// without touching the production constants above.
+export const createRateLimiter = (message, options = {}) =>
   rateLimit({
-    windowMs: RATE_LIMIT_WINDOW_MS,
-    max: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: options.windowMs ?? RATE_LIMIT_WINDOW_MS,
+    max: options.max ?? RATE_LIMIT_MAX_REQUESTS,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: options.keyGenerator,
     handler: (req, res, next) => next(new ApiError(429, message)),
   });
 
@@ -20,12 +23,16 @@ const isTest = process.env.NODE_ENV === 'test';
 
 export const loginRateLimiter = isTest
   ? passthrough
-  : createRateLimiter(
-      'Too many login attempts. Please try again in 15 minutes.'
-    );
+  : createRateLimiter('Too many login attempts. Please try again in 15 minutes.');
 
 export const registerRateLimiter = isTest
   ? passthrough
-  : createRateLimiter(
-      'Too many registration attempts. Please try again in 15 minutes.'
-    );
+  : createRateLimiter('Too many registration attempts. Please try again in 15 minutes.');
+
+// Image uploads are heavier than auth requests, so they get a
+// dedicated, more generous limit: 20 uploads per 15 minutes per IP.
+// Always active (including tests) since real uploads are infrequent.
+export const uploadRateLimiter = createRateLimiter(
+  'Too many upload attempts. Please try again in 15 minutes.',
+  { max: 20 }
+);

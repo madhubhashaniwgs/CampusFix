@@ -21,6 +21,7 @@ import ImageModal from '../../components/common/ImageModal';
 import QuickStatusModal from '../../components/issues/QuickStatusModal';
 import EmptyState from '../../components/common/EmptyState';
 import { getIssues, getIssueCount } from '../../services/issueService';
+import { useRealtimeRefresh } from '../../hooks/useRealtime';
 
 const PAGE_SIZE = 10;
 
@@ -82,9 +83,7 @@ export default function StaffIssuesPage() {
     try {
       const counts = await Promise.all(
         STATUS_TABS.map((t) =>
-          t.value === 'all'
-            ? getIssueCount()
-            : getIssueCount({ status: t.value })
+          t.value === 'all' ? getIssueCount() : getIssueCount({ status: t.value })
         )
       );
       const map = {};
@@ -133,6 +132,21 @@ export default function StaffIssuesPage() {
   useEffect(() => {
     fetchIssues(page);
   }, [fetchIssues, page]);
+
+  useRealtimeRefresh(
+    [
+      'issue:created',
+      'issue:assigned',
+      'issue:status_changed',
+      'issue:updated',
+      'dashboard:stats_updated',
+    ],
+    () => {
+      fetchIssues(page);
+      fetchCounts();
+    },
+    [fetchIssues]
+  );
 
   const resetFilters = () => {
     setFilter('all');

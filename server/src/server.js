@@ -1,9 +1,9 @@
-
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import app from './app.js';
 import connectDB from './config/database.js';
 import validateEnv from './config/validateEnv.js';
+import { initSocket } from './socket/socketServer.js';
 
 dotenv.config();
 validateEnv();
@@ -16,6 +16,8 @@ const startServer = async () => {
   const server = app.listen(PORT, () => {
     console.log(`CampusFix server running on port ${PORT}`);
   });
+
+  initSocket(server);
 
   const shutdown = async (signal) => {
     console.log(`${signal} received. Shutting down gracefully...`);

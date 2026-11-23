@@ -8,10 +8,7 @@ export const CSRF_HEADER_NAME = 'x-csrf-token';
 // client (or a subdomain attacker performing cookie tossing) cannot
 // mint a valid token — only echo one the server issued.
 export const signCsrfToken = (token) => {
-  const signature = crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(token)
-    .digest('hex');
+  const signature = crypto.createHmac('sha256', process.env.JWT_SECRET).update(token).digest('hex');
   return `${token}.${signature}`;
 };
 
@@ -24,17 +21,11 @@ export const verifyCsrfToken = (signedToken) => {
   const token = signedToken.slice(0, dotIndex);
   const signature = signedToken.slice(dotIndex + 1);
 
-  const expected = crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(token)
-    .digest('hex');
+  const expected = crypto.createHmac('sha256', process.env.JWT_SECRET).update(token).digest('hex');
 
   if (signature.length !== expected.length) return false;
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 };
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -58,8 +49,7 @@ const expiresInToMs = (value) => {
   return amount * multipliers[unit];
 };
 
-const cookieMaxAge = () =>
-  expiresInToMs(process.env.JWT_EXPIRES_IN || '1h');
+const cookieMaxAge = () => expiresInToMs(process.env.JWT_EXPIRES_IN || '1h');
 
 // SameSite=None requires Secure and is only meaningful for
 // cross-site deployments (e.g. frontend and backend on different

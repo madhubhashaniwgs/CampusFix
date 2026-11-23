@@ -1,4 +1,3 @@
-
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from './context/AuthContext';
@@ -15,6 +14,8 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminIssueDetailsPage from './pages/admin/AdminIssueDetailsPage';
 import AdminStaffPage from './pages/admin/AdminStaffPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffIssuesPage from './pages/staff/StaffIssuesPage';
 import StaffIssueDetailsPage from './pages/staff/StaffIssueDetailsPage';
@@ -82,68 +83,34 @@ function App() {
 
       {/* Student Routes */}
       <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-        <Route
-          path="/student/dashboard"
-          element={<DashboardPage />}
-        />
-        <Route
-          path="/student/report-issue"
-          element={<ReportIssuePage />}
-        />
+        <Route path="/student/dashboard" element={<DashboardPage />} />
+        <Route path="/student/report-issue" element={<ReportIssuePage />} />
 
-        <Route
-        path="/student/my-issues"
-        element={<MyIssuesPage />}
-      />
+        <Route path="/student/my-issues" element={<MyIssuesPage />} />
 
-        <Route
-          path="/student/issues/:id"
-          element={<IssueDetailsPage />}
-        />
+        <Route path="/student/issues/:id" element={<IssueDetailsPage />} />
       </Route>
-
-      
 
       {/* Staff Routes */}
       <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
-        <Route
-          path="/staff/dashboard"
-          element={<StaffDashboardPage />}
-        />
+        <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
 
-        <Route
-          path="/staff/issues"
-          element={<StaffIssuesPage />}
-        />
+        <Route path="/staff/issues" element={<StaffIssuesPage />} />
 
-        <Route
-          path="/staff/issues/:id"
-          element={<StaffIssueDetailsPage />}
-        />
+        <Route path="/staff/issues/:id" element={<StaffIssueDetailsPage />} />
       </Route>
 
       {/* Admin Routes */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-        <Route
-          path="/admin/dashboard"
-          element={<AdminDashboardPage />}
-        />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
 
-        <Route
-          path="/admin/issues"
-          element={<AdminIssuesPage />}
-        />
+        <Route path="/admin/issues" element={<AdminIssuesPage />} />
 
-        <Route
-          path="/admin/issues/:id"
-          element={<AdminIssueDetailsPage />}
-        />
+        <Route path="/admin/issues/:id" element={<AdminIssueDetailsPage />} />
 
-        <Route
-          path="/admin/staff"
-          element={<AdminStaffPage />}
-        />
-
+        <Route path="/admin/staff" element={<AdminStaffPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>

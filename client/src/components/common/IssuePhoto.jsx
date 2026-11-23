@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  ImageOff,
-  Zap,
-  Droplets,
-  Monitor,
-  Armchair,
-  Wrench,
-  Search,
-} from 'lucide-react';
+import { ImageOff, Zap, Droplets, Monitor, Armchair, Wrench, Search } from 'lucide-react';
 
 const CATEGORY_META = {
   electrical: {
@@ -123,7 +115,8 @@ export default function IssuePhoto({
             <ImageOff className="w-3.5 h-3.5 text-purple-600" /> No Photo Attached
           </span>
           <p className="text-xs text-purple-900/70 mt-1.5 max-w-xs font-medium">
-            This issue was submitted without a photo. Technicians can verify and inspect the location on site.
+            This issue was submitted without a photo. Technicians can verify and inspect the
+            location on site.
           </p>
         </div>
       </div>
@@ -167,4 +160,3 @@ export default function IssuePhoto({
     </div>
   );
 }
-
